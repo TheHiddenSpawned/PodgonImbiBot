@@ -1,6 +1,7 @@
 import os
 import asyncio
 import asyncpg
+import json
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import (
     Message,
@@ -99,11 +100,17 @@ def preview_kb():
         ]
     ])
 
-def moderation_kb():
+def moderation_kb(submission_id):
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="✅ Опубликовать", callback_data="approve"),
-            InlineKeyboardButton(text="❌ Отклонить", callback_data="reject")
+            InlineKeyboardButton(
+                text="✅ Опубликовать",
+                callback_data=f"approve_{submission_id}"
+            ),
+            InlineKeyboardButton(
+                text="❌ Отклонить",
+                callback_data=f"reject_{submission_id}"
+            )
         ]
     ])
 
@@ -474,6 +481,22 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
         media_list = user_data.get("media", [])
 
+        conn = await dp["db"].acquire()
+
+        submission_id = await conn.fetchval("""
+            INSERT INTO submissions (telegram_id, username, nickname, text, media)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id
+        """,
+            callback.from_user.id,
+            callback.from_user.username,
+            nickname,
+            user_data.get("text"),
+            json.dumps(media_list)
+        )
+
+        await dp["db"].release(conn)
+
         if media_list:
             first = True
             for media_type, file_id in media_list:
@@ -733,7 +756,18 @@ async def main():
                 username TEXT
             );
         """)
-
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS submissions (
+                id SERIAL PRIMARY KEY,
+                telegram_id BIGINT,
+                username TEXT,
+                nickname TEXT,
+                text TEXT,
+                media JSONB,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
     await dp.start_polling(bot)
 
 

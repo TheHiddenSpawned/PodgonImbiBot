@@ -114,6 +114,11 @@ def moderation_kb(submission_id):
         ]
     ])
 
+def after_submit_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🚀 Прислать ещё подгон", callback_data="home")],
+    ])
+
 def edit_kb(has_text: bool, has_media: bool):
     buttons = []
 
@@ -645,8 +650,13 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                 reply_markup=moderation_kb(submission_id)
             )
 
-        await callback.message.answer("Подгон отправлен на модерацию 🔥")
         await state.clear()
+
+        await callback.message.answer(
+            "🔥 Подгон отправлен на модерацию!\n\n"
+            "Хочешь прислать ещё один?",
+            reply_markup=after_submit_kb()
+        )
         return
 
 # ---------- ТЕКСТ ----------

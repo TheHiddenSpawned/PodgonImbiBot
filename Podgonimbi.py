@@ -1,5 +1,6 @@
 import os
 import asyncio
+import asyncpg
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import (
     Message,
@@ -18,6 +19,7 @@ from http.server import SimpleHTTPRequestHandler, HTTPServer
 
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 bot = Bot(TOKEN)
 dp = Dispatcher()
@@ -669,11 +671,14 @@ async def get_custom_nick(message: Message, state: FSMContext):
     current = await state.get_state()
     await state.update_data(prev_state=current)
     await state.set_state(Form.preview)
-
+    
+    async def create_pool():
+        return await asyncpg.create_pool(DATABASE_URL)
 
 # ---------- ЗАПУСК ----------
 
 async def main():
+    dp["db"] = await create_pool()
     await dp.start_polling(bot)
 
 

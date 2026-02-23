@@ -679,6 +679,16 @@ async def get_custom_nick(message: Message, state: FSMContext):
 
 async def main():
     dp["db"] = await create_pool()
+
+    async with dp["db"].acquire() as conn:
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                telegram_id BIGINT UNIQUE,
+                username TEXT
+            );
+        """)
+
     await dp.start_polling(bot)
 
 

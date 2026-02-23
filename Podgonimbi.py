@@ -13,6 +13,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram import F
 from aiogram.exceptions import TelegramBadRequest
+from threading import Thread
+from http.server import SimpleHTTPRequestHandler, HTTPServer
 
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = 968636929
@@ -675,5 +677,12 @@ async def main():
     await dp.start_polling(bot)
 
 
+def run_http():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
+    server.serve_forever()
+
+
 if __name__ == "__main__":
+    Thread(target=run_http, daemon=True).start()
     asyncio.run(main())

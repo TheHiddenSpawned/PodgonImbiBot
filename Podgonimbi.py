@@ -506,35 +506,35 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                             ADMIN_ID,
                             file_id,
                             caption=caption,
-                            reply_markup=moderation_kb()
+                            reply_markup=moderation_kb(submission_id)
                         )
                     elif media_type == "video":
                         await bot.send_video(
                             ADMIN_ID,
                             file_id,
                             caption=caption,
-                            reply_markup=moderation_kb()
+                            reply_markup=moderation_kb(submission_id)
                         )
                     elif media_type == "document":
                         await bot.send_document(
                             ADMIN_ID,
                             file_id,
                             caption=caption,
-                            reply_markup=moderation_kb()
+                            reply_markup=moderation_kb(submission_id)
                         )
                     elif media_type == "audio":
                         await bot.send_audio(
                             ADMIN_ID,
                             file_id,
                             caption=caption,
-                            reply_markup=moderation_kb()
+                            reply_markup=moderation_kb(submission_id)
                         )
                     elif media_type == "voice":
                         await bot.send_voice(
                             ADMIN_ID,
                             file_id,
                             caption=caption,
-                            reply_markup=moderation_kb()
+                            reply_markup=moderation_kb(submission_id)
                         )
                     first = False
                 else:
@@ -552,7 +552,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             await bot.send_message(
                 ADMIN_ID,
                 caption,
-                reply_markup=moderation_kb()
+                reply_markup=moderation_kb(submission_id)
             )
 
         await callback.message.answer("Подгон опубликован 🔥")
@@ -742,6 +742,88 @@ async def get_custom_nick(message: Message, state: FSMContext):
     
 async def create_pool():
     return await asyncpg.create_pool(DATABASE_URL)
+
+# ---------- Одобрить ----------
+@dp.callback_query(F.data.startswith("approve_"))
+async def approve_submission(callback: CallbackQuery):
+
+    submission_id = int(callback.data.split("_")[1])
+
+    conn = await dp["db"].acquire()
+
+    submission = await conn.fetchrow(
+        "SELECT * FROM submissions WHERE id = $1",
+        submission_id
+    )
+
+    if not submission:
+        await callback.answer("Не найдено")
+        await dp["db"].release(conn)
+        return
+
+    caption = f"🔥 Новый подгон\n\n👤 {submission['nickname']}"
+
+    if submission["text"]:
+        caption += f"\n\n📝 {submission['text']}"
+
+    media_list = json.loads(submission["media"]) if submission["media"] else []
+
+    if media_list:
+        first = True
+        for media_type, file_id in media_list:
+            if first:
+                if media_type == "photo":
+                    await bot.send_photo(CHANNEL_ID, file_id, caption=caption)
+                elif media_type == "video":
+                    await bot.send_video(CHANNEL_ID, file_id, caption=caption)
+                elif media_type == "document":
+                    await bot.send_document(CHANNEL_ID, file_id, caption=caption)
+                elif media_type == "audio":
+                    await bot.send_audio(CHANNEL_ID, file_id, caption=caption)
+                elif media_type == "voice":
+                    await bot.send_voice(CHANNEL_ID, file_id, caption=caption)
+                first = False
+            else:
+                if media_type == "photo":
+                    await bot.send_photo(CHANNEL_ID, file_id)
+                elif media_type == "video":
+                    await bot.send_video(CHANNEL_ID, file_id)
+                elif media_type == "document":
+                    await bot.send_document(CHANNEL_ID, file_id)
+                elif media_type == "audio":
+                    await bot.send_audio(CHANNEL_ID, file_id)
+                elif media_type == "voice":
+                    await bot.send_voice(CHANNEL_ID, file_id)
+    else:
+        await bot.send_message(CHANNEL_ID, caption)
+
+    await conn.execute(
+        "UPDATE submissions SET status = 'approved' WHERE id = $1",
+        submission_id
+    )
+
+    await dp["db"].release(conn)
+
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.answer("Опубликовано ✅")
+
+# ---------- Отклонить ----------
+@dp.callback_query(F.data.startswith("reject_"))
+async def reject_submission(callback: CallbackQuery):
+
+    submission_id = int(callback.data.split("_")[1])
+
+    conn = await dp["db"].acquire()
+
+    await conn.execute(
+        "UPDATE submissions SET status = 'rejected' WHERE id = $1",
+        submission_id
+    )
+
+    await dp["db"].release(conn)
+
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.answer("Отклонено ❌")
 
 # ---------- ЗАПУСК ----------
 

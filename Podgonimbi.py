@@ -20,6 +20,12 @@ from http.server import SimpleHTTPRequestHandler, HTTPServer
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 DATABASE_URL = os.getenv("DATABASE_URL")
+CHANNEL_ID = os.getenv("CHANNEL_ID")
+
+if not CHANNEL_ID:
+    raise ValueError("CHANNEL_ID not set")
+
+CHANNEL_ID = int(CHANNEL_ID)
 
 bot = Bot(TOKEN)
 dp = Dispatcher()

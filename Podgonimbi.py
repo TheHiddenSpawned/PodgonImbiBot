@@ -1,0 +1,679 @@
+import os
+import asyncio
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import (
+    Message,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    CallbackQuery
+)
+from aiogram.enums import ContentType
+from aiogram.filters import CommandStart
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
+from aiogram import F
+from aiogram.exceptions import TelegramBadRequest
+
+TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_ID = 968636929
+
+bot = Bot(TOKEN)
+dp = Dispatcher()
+
+
+class Form(StatesGroup):
+    choosing_type = State()
+    waiting_text = State()
+    text_menu = State()        
+    waiting_media = State()
+    media_menu = State()       
+    nickname = State()
+    custom_nickname = State()
+    delete_media = State()
+    preview = State()
+    edit_menu = State()
+
+
+# ---------- INLINE КЛАВИАТУРЫ ----------
+
+def start_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✍️ Прислать текст", callback_data="send_text")],
+        [InlineKeyboardButton(text="📎 Прислать медиа", callback_data="send_media")]
+    ])
+
+
+def after_text_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📎 Добавить медиа", callback_data="add_media")],
+        [InlineKeyboardButton(text="🚀 Опубликовать", callback_data="to_nick")],
+        [
+            InlineKeyboardButton(text="🔄 Назад", callback_data="back"),
+            InlineKeyboardButton(text="🏠 В начало", callback_data="home")
+        ]
+    ])
+
+
+def after_media_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✍️ Добавить текст", callback_data="add_text")],
+        [InlineKeyboardButton(text="🗑 Удалить медиа", callback_data="delete_media")],
+        [InlineKeyboardButton(text="🚀 Опубликовать", callback_data="to_nick")],
+        [
+            InlineKeyboardButton(text="🔄 Назад", callback_data="back"),
+            InlineKeyboardButton(text="🏠 В начало", callback_data="home")
+        ]
+    ])
+
+
+def nick_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Ник из телеграмма", callback_data="my_nick")],
+        [InlineKeyboardButton(text="Анонимно", callback_data="anon")],
+         [InlineKeyboardButton(text="✏️ Ввести свой ник", callback_data="custom_nick")],
+        [
+            InlineKeyboardButton(text="🔄 Назад", callback_data="back"),
+            InlineKeyboardButton(text="🏠 В начало", callback_data="home")
+        ]
+    ])
+
+def preview_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Опубликовать", callback_data="confirm_publish")],
+        [InlineKeyboardButton(text="✏️ Изменить", callback_data="edit_menu")],
+        [
+            InlineKeyboardButton(text="🔄 Назад", callback_data="back"),
+            InlineKeyboardButton(text="🏠 В начало", callback_data="home")
+        ]
+    ])
+    
+def edit_kb(has_text: bool, has_media: bool):
+    buttons = []
+
+    # Текст
+    if has_text:
+        buttons.append(
+            [InlineKeyboardButton(text="✍️ Изменить текст", callback_data="edit_text")]
+        )
+    else:
+        buttons.append(
+            [InlineKeyboardButton(text="➕ Добавить текст", callback_data="add_text")]
+        )
+
+    # Медиа
+    if has_media:
+        buttons.append(
+            [InlineKeyboardButton(text="🗑 Удалить медиа", callback_data="delete_media")]
+        )
+
+    buttons.append(
+        [InlineKeyboardButton(text="📎 Добавить медиа", callback_data="add_media")]
+    )
+
+    # Ник
+    buttons.append(
+        [InlineKeyboardButton(text="👤 Изменить ник", callback_data="to_nick")]
+    )
+
+    # Навигация
+    buttons.append(
+        [
+            InlineKeyboardButton(text="🔄 Назад", callback_data="back"),
+            InlineKeyboardButton(text="🏠 В начало", callback_data="home")
+        ]
+    )
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons)    
+
+# ---------- СТАРТ ----------
+
+@dp.message(CommandStart())
+async def start(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer(
+        "Кидай имбу 🔥\n\n"
+        "Можно отправить:\n\n"
+        "✍️ Текст — описание фишки, мысль, новость, в общем всё, что считаешь имбой\n\n"
+        "📎 Медиа — скрин, видео, файл, голосовое, музыку и т.д.\n\n"
+        "Можно отправить и текст, и медиа или что-то одно.",
+        reply_markup=start_kb()
+    )
+    await state.set_state(Form.choosing_type)
+
+
+# ---------- CALLBACK ОБРАБОТЧИК ----------
+
+@dp.callback_query(F.data)
+async def callbacks(callback: CallbackQuery, state: FSMContext):
+    data = callback.data
+    await callback.answer()
+
+    async def safe_edit(text, markup):
+        try:
+            await callback.message.edit_text(text, reply_markup=markup)
+        except TelegramBadRequest as e:
+            if "message is not modified" not in str(e):
+                raise
+
+    async def go(new_state):
+        current = await state.get_state()
+        user_data = await state.get_data()
+        history = user_data.get("history", [])
+
+        if current:
+            history.append(current)
+
+        await state.update_data(history=history)
+        await state.set_state(new_state)
+
+    # ---------------- HOME ----------------
+    if data == "home":
+        await state.clear()
+        await safe_edit(
+            "Кидай имбу 🔥\n\n"
+            "Можно отправить:\n\n"
+            "✍️ Текст — описание фишки, мысль, новость, в общем всё, что считаешь имбой\n\n"
+            "📎 Медиа — скрин, видео, файл и т.д.\n\n"
+            "Можно отправить и текст, и медиа или что-то одно.",
+            start_kb()
+        )
+        await state.set_state(Form.choosing_type)
+        return
+
+    # ---------------- BACK ----------------
+    if data == "back":
+
+        user_data = await state.get_data()
+        history = user_data.get("history", [])
+
+        if not history:
+            return
+
+        prev_state = history.pop()
+        await state.update_data(history=history)
+        await state.set_state(prev_state)
+
+        if prev_state == Form.choosing_type:
+            await safe_edit(
+                "Кидай имбу 🔥\n\n"
+                "Можно отправить:\n\n"
+                "✍️ Текст — описание фишки, мысль, новость, в общем всё, что считаешь имбой\n\n"
+                "📎 Медиа — скрин, видео и т.д.\n\n"
+                "Можно отправить и текст, и медиа или что-то одно.",
+                start_kb()
+            )
+
+        elif prev_state == Form.waiting_text:
+            await safe_edit(
+                "Отправь текст ✍️",
+                InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🔄 Назад", callback_data="back")],
+                    [InlineKeyboardButton(text="🏠 В начало", callback_data="home")]
+                ])
+            )
+
+        elif prev_state == Form.text_menu:
+            await safe_edit(
+                "Текст сохранён ✅\nХочешь добавить медиа или перейти дальше?",
+                after_text_kb()
+            )
+
+        elif prev_state == Form.waiting_media:
+            await safe_edit(
+                "Отправь медиа 📎 (можно несколько подряд)",
+                InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔄 Назад", callback_data="back")],
+                [InlineKeyboardButton(text="🏠 В начало", callback_data="home")]
+                ])
+            )
+
+        elif prev_state == Form.media_menu:
+            media = user_data.get("media", [])
+            await safe_edit(
+                f"Медиа добавлено ({len(media)}/10) ✅\n"
+                "Можешь отправить ещё или перейти дальше.",
+                after_media_kb()
+            )
+
+        elif prev_state == Form.nickname:
+            await safe_edit(
+                "Как подписать подгон?",
+                nick_kb()
+            )
+
+        elif prev_state == Form.custom_nickname:
+            await safe_edit(
+                "Введи ник или подпись 👇",
+                InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🔄 Назад", callback_data="back")],
+                    [InlineKeyboardButton(text="🏠 В начало", callback_data="home")]
+                ])
+            )
+
+        elif prev_state == Form.preview:
+            await safe_edit(
+                "Публикуем?",
+                preview_kb()
+            )
+        elif prev_state == Form.edit_menu:
+            user_data = await state.get_data()
+            has_text = bool(user_data.get("text"))
+            has_media = bool(user_data.get("media"))
+
+            await safe_edit(
+                "Что хочешь изменить?",
+                edit_kb(has_text, has_media)
+            )
+
+    if data == "edit_menu":
+        user_data = await state.get_data()
+
+        has_text = bool(user_data.get("text"))
+        has_media = bool(user_data.get("media"))
+
+        await go(Form.edit_menu)
+
+        await safe_edit(
+            "Что хочешь изменить?",
+            edit_kb(has_text, has_media)
+        )
+        return
+
+    # ---------------- TEXT ----------------
+    if data in ["send_text", "add_text"]:
+        await go(Form.waiting_text)
+
+        await safe_edit(
+            "Отправь текст ✍️",
+            InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔄 Назад", callback_data="back")],
+                [InlineKeyboardButton(text="🏠 В начало", callback_data="home")]
+            ])
+        )
+        return
+
+    # ---------------- NEW TEXT ----------------
+    if data == "edit_text":
+        await go(Form.waiting_text)
+
+        await safe_edit(
+            "Отправь новый текст ✍️",
+            InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔄 Назад", callback_data="back")],
+                [InlineKeyboardButton(text="🏠 В начало", callback_data="home")]
+            ])
+        )
+        return
+
+    # ---------------- MEDIA ----------------
+    if data in ["send_media", "add_media"]:
+        await state.update_data(media=[])
+        await go(Form.waiting_media)
+
+        await safe_edit(
+            "Отправь медиа 📎 (можно несколько подряд)",
+            InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔄 Назад", callback_data="back")],
+                [InlineKeyboardButton(text="🏠 В начало", callback_data="home")]
+            ])
+        )
+        return
+
+    # ---------------- TO NICK ----------------
+    if data == "to_nick":
+        user_data = await state.get_data()
+
+        # если ник уже выбран — просто preview
+        if user_data.get("final_nick"):
+            await state.set_state(Form.preview)
+
+            await safe_edit(
+                "Публикуем?",
+                preview_kb()
+            )
+            return
+
+        # иначе выбираем ник
+        await go(Form.nickname)
+
+        await safe_edit(
+            "Как подписать подгон?",
+            nick_kb()
+        )
+        return
+        
+        # ---------- DELETE MEDIA ----------
+    if data == "delete_media":
+
+        user_data = await state.get_data()
+        media_list = user_data.get("media", [])
+
+        if not media_list:
+            await callback.message.answer("❌ Медиа пока нет.")
+            return
+
+        await state.set_state(Form.delete_media)
+
+        await callback.message.answer(
+            f"🗑 Какое по счёту медиа удалить? (1–{len(media_list)})\n"
+            "Просто напиши цифру."
+        )
+        return
+
+    # ---------------- CUSTOM NICK ----------------
+    if data == "custom_nick":
+        await go(Form.custom_nickname)
+
+        await safe_edit(
+            "Введи ник или подпись 👇",
+            InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔄 Назад", callback_data="back")],
+                [InlineKeyboardButton(text="🏠 В начало", callback_data="home")]
+            ])
+        )
+        return
+
+    # Ник
+    if data in ["my_nick", "anon"] or data == "publish_custom":
+
+        user_data = await state.get_data()
+
+        # определяем ник
+        if data == "my_nick":
+            nickname = (
+                f"@{callback.from_user.username}"
+                if callback.from_user.username
+                else callback.from_user.full_name
+            )
+        else:
+            nickname = "Аноним"
+
+        if user_data.get("custom_nick"):
+            nickname = user_data.get("custom_nick")
+        await state.update_data(final_nick=nickname)
+
+        caption = f"🔥 Вот как будет выглядеть пост:\n\n👤 {nickname}"
+
+
+        if user_data.get("text"):
+            caption += f"\n\n📝 {user_data['text']}"
+
+        media_list = user_data.get("media", [])
+
+        if media_list:
+            first = True
+            for media_type, file_id in media_list:
+                if first:
+                    if media_type == "photo":
+                        await bot.send_photo(callback.from_user.id, file_id, caption=caption)
+                    elif media_type == "video":
+                        await bot.send_video(callback.from_user.id, file_id, caption=caption)
+                    elif media_type == "document":
+                        await bot.send_document(callback.from_user.id, file_id, caption=caption)
+                    elif media_type == "audio":
+                        await bot.send_audio(callback.from_user.id, file_id, caption=caption)
+                    elif media_type == "voice":
+                        await bot.send_voice(callback.from_user.id, file_id, caption=caption)
+                    first = False
+                else:
+                    if media_type == "photo":
+                                await bot.send_photo(callback.from_user.id, file_id)
+                    elif media_type == "video":
+                        await bot.send_video(callback.from_user.id, file_id)
+                    elif media_type == "document":
+                        await bot.send_document(callback.from_user.id, file_id)
+                    elif media_type == "audio":
+                        await bot.send_audio(callback.from_user.id, file_id)
+                    elif media_type == "voice":
+                        await bot.send_voice(callback.from_user.id, file_id)
+        else:
+            await callback.message.answer(caption)
+
+        await callback.message.answer(
+            "Публикуем?",
+            reply_markup=preview_kb()
+        )
+
+        current = await state.get_state()
+        await state.update_data(prev_state=current)
+        await state.set_state(Form.preview)
+        return
+    
+    # ---------- ПОДТВЕРЖДЕНИЕ ПУБЛИКАЦИИ ----------
+
+    if data == "confirm_publish":
+
+        user_data = await state.get_data()
+
+        nickname = user_data.get("final_nick")
+
+        caption = f"🔥 Новый подгон\n\n👤 {nickname}"
+
+        if user_data.get("text"):
+            caption += f"\n\n📝 {user_data['text']}"
+
+        media_list = user_data.get("media", [])
+
+        if media_list:
+            first = True
+            for media_type, file_id in media_list:
+                if first:
+                    if media_type == "photo":
+                        await bot.send_photo(ADMIN_ID, file_id, caption=caption)
+                    elif media_type == "video":
+                        await bot.send_video(ADMIN_ID, file_id, caption=caption)
+                    elif media_type == "document":
+                        await bot.send_document(ADMIN_ID, file_id, caption=caption)
+                    elif media_type == "audio":
+                        await bot.send_audio(ADMIN_ID, file_id, caption=caption)
+                    elif media_type == "voice":
+                        await bot.send_voice(ADMIN_ID, file_id, caption=caption)
+                    first = False
+                else:
+                    if media_type == "photo":
+                        await bot.send_photo(ADMIN_ID, file_id)
+                    elif media_type == "video":
+                        await bot.send_video(ADMIN_ID, file_id)
+                    elif media_type == "document":
+                        await bot.send_document(ADMIN_ID, file_id)
+                    elif media_type == "audio":
+                        await bot.send_audio(ADMIN_ID, file_id)
+                    elif media_type == "voice":
+                        await bot.send_voice(ADMIN_ID, file_id)
+        else:
+            await bot.send_message(ADMIN_ID, caption)
+
+        await callback.message.answer("Подгон опубликован 🔥")
+        await state.clear()
+        return
+
+# ---------- ТЕКСТ ----------
+
+@dp.message(Form.waiting_text)
+async def get_text(message: Message, state: FSMContext):
+
+    if message.content_type != ContentType.TEXT:
+        await message.answer("Сейчас нужен текст ✍️")
+        return   
+
+    await state.update_data(text=message.text)
+    current = await state.get_state()
+    user_data = await state.get_data()
+    history = user_data.get("history", [])
+
+    if current:
+        history.append(current)
+
+    await state.update_data(history=history)
+    await state.set_state(Form.text_menu)
+
+    await message.answer(
+        "Текст сохранён ✅\nХочешь добавить медиа или перейти дальше?",
+        reply_markup=after_text_kb()
+    )
+
+
+# ---------- МЕДИА ----------
+
+@dp.message(Form.waiting_media)
+async def get_media(message: Message, state: FSMContext):
+
+    if message.content_type not in [
+        ContentType.PHOTO,
+        ContentType.VIDEO,
+        ContentType.DOCUMENT,
+        ContentType.AUDIO,
+        ContentType.VOICE
+    ]:
+        await message.answer("Сейчас нужно медиа 📎")
+        return
+
+    data = await state.get_data()
+    media_list = data.get("media", [])
+
+    # 🚫 ЛИМИТ 10
+    if len(media_list) >= 10:
+        await message.answer(
+            "😒 Эй, хватит!\n\n"
+            "Можно отправить максимум 10 файлов.\n"
+            "Так что либо публикуй, либо удаляй один из файлов.",
+            reply_markup=after_media_kb()
+        )
+        return
+
+    if message.photo:
+        media_list.append(("photo", message.photo[-1].file_id))
+
+    elif message.video:
+        media_list.append(("video", message.video.file_id))
+
+    elif message.document:
+        media_list.append(("document", message.document.file_id))
+
+    elif message.audio:
+        media_list.append(("audio", message.audio.file_id))
+
+    elif message.voice:
+        media_list.append(("voice", message.voice.file_id))
+
+    await state.update_data(media=media_list)
+    current = await state.get_state()
+    user_data = await state.get_data()
+    history = user_data.get("history", [])
+
+    if current:
+        history.append(current)
+
+    await state.update_data(history=history)
+    await state.set_state(Form.media_menu)
+
+    await message.answer(
+        f"Медиа добавлено ({len(media_list)}/10) ✅\n"
+        "Можешь отправить ещё или перейти дальше.",
+        reply_markup=after_media_kb()
+    )
+    
+@dp.message(Form.delete_media)
+async def process_delete_media(message: Message, state: FSMContext):
+
+    if not message.text.isdigit():
+        await message.answer("Нужно отправить цифру 👀")
+        return
+
+    index = int(message.text) - 1
+
+    data = await state.get_data()
+    media_list = data.get("media", [])
+
+    if index < 0 or index >= len(media_list):
+        await message.answer("Такого номера нет 😕")
+        return
+
+    media_list.pop(index)
+
+    await state.update_data(media=media_list)
+
+    current = await state.get_state()
+    user_data = await state.get_data()
+    history = user_data.get("history", [])
+
+    if current:
+        history.append(current)
+
+    await state.update_data(history=history)
+    await state.set_state(Form.media_menu)
+
+    await message.answer(
+        f"✅ Удалено медиа №{index + 1}\n"
+        f"Осталось файлов: {len(media_list)}/10",
+        reply_markup=after_media_kb()
+    )    
+    
+# ---------- Ник ----------
+@dp.message(Form.custom_nickname)
+async def get_custom_nick(message: Message, state: FSMContext):
+
+    if message.content_type != ContentType.TEXT:
+        await message.answer("Нужен текстовый ник ✍️")
+        return
+
+    await state.update_data(custom_nick=message.text)
+    user_data = await state.get_data()
+
+    nickname = message.text
+    await state.update_data(final_nick=nickname)
+
+    caption = f"🔥 Вот как будет выглядеть пост:\n\n👤 {nickname}"
+
+    if user_data.get("text"):
+        caption += f"\n\n📝 {user_data['text']}"
+
+    media_list = user_data.get("media", [])
+
+    if media_list:
+        first = True
+        for media_type, file_id in media_list:
+            if first:
+                if media_type == "photo":
+                    await bot.send_photo(message.from_user.id, file_id, caption=caption)
+                elif media_type == "video":
+                    await bot.send_video(message.from_user.id, file_id, caption=caption)
+                elif media_type == "document":
+                    await bot.send_document(message.from_user.id, file_id, caption=caption)
+                elif media_type == "audio":
+                    await bot.send_audio(message.from_user.id, file_id, caption=caption)
+                elif media_type == "voice":
+                    await bot.send_voice(message.from_user.id, file_id, caption=caption)
+                first = False
+            else:
+                if media_type == "photo":
+                    await bot.send_photo(message.from_user.id, file_id)
+                elif media_type == "video":
+                    await bot.send_video(message.from_user.id, file_id)
+                elif media_type == "document":
+                    await bot.send_document(message.from_user.id, file_id)
+                elif media_type == "audio":
+                    await bot.send_audio(message.from_user.id, file_id)
+                elif media_type == "voice":
+                    await bot.send_voice(message.from_user.id, file_id)
+    else:
+        await message.answer(caption)
+
+    await message.answer(
+        "Публикуем?",
+        reply_markup=preview_kb()
+    )
+
+    current = await state.get_state()
+    await state.update_data(prev_state=current)
+    await state.set_state(Form.preview)
+
+
+# ---------- ЗАПУСК ----------
+
+async def main():
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

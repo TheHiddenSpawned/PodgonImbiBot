@@ -16,6 +16,8 @@ from aiogram import F
 from aiogram.exceptions import TelegramBadRequest
 from threading import Thread
 from http.server import SimpleHTTPRequestHandler, HTTPServer
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
@@ -96,7 +98,15 @@ def preview_kb():
             InlineKeyboardButton(text="🏠 В начало", callback_data="home")
         ]
     ])
-    
+
+def moderation_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Опубликовать", callback_data="approve"),
+            InlineKeyboardButton(text="❌ Отклонить", callback_data="reject")
+        ]
+    ])
+
 def edit_kb(has_text: bool, has_media: bool):
     buttons = []
 
@@ -469,15 +479,40 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             for media_type, file_id in media_list:
                 if first:
                     if media_type == "photo":
-                        await bot.send_photo(ADMIN_ID, file_id, caption=caption)
+                        await bot.send_photo(
+                            ADMIN_ID,
+                            file_id,
+                            caption=caption,
+                            reply_markup=moderation_kb()
+                        )
                     elif media_type == "video":
-                        await bot.send_video(ADMIN_ID, file_id, caption=caption)
+                        await bot.send_video(
+                            ADMIN_ID,
+                            file_id,
+                            caption=caption,
+                            reply_markup=moderation_kb()
+                        )
                     elif media_type == "document":
-                        await bot.send_document(ADMIN_ID, file_id, caption=caption)
+                        await bot.send_document(
+                            ADMIN_ID,
+                            file_id,
+                            caption=caption,
+                            reply_markup=moderation_kb()
+                        )
                     elif media_type == "audio":
-                        await bot.send_audio(ADMIN_ID, file_id, caption=caption)
+                        await bot.send_audio(
+                            ADMIN_ID,
+                            file_id,
+                            caption=caption,
+                            reply_markup=moderation_kb()
+                        )
                     elif media_type == "voice":
-                        await bot.send_voice(ADMIN_ID, file_id, caption=caption)
+                        await bot.send_voice(
+                            ADMIN_ID,
+                            file_id,
+                            caption=caption,
+                            reply_markup=moderation_kb()
+                        )
                     first = False
                 else:
                     if media_type == "photo":
@@ -491,7 +526,11 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                     elif media_type == "voice":
                         await bot.send_voice(ADMIN_ID, file_id)
         else:
-            await bot.send_message(ADMIN_ID, caption)
+            await bot.send_message(
+                ADMIN_ID,
+                caption,
+                reply_markup=moderation_kb()
+            )
 
         await callback.message.answer("Подгон опубликован 🔥")
         await state.clear()

@@ -630,7 +630,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                 reply_markup=moderation_kb(submission_id)
             )
 
-        await callback.message.answer("Подгон опубликован 🔥")
+        await callback.message.answer("Подгон отправлен на модерацию 🔥")
         await state.clear()
         return
 

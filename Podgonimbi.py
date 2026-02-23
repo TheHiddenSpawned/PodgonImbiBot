@@ -672,8 +672,8 @@ async def get_custom_nick(message: Message, state: FSMContext):
     await state.update_data(prev_state=current)
     await state.set_state(Form.preview)
     
-    async def create_pool():
-        return await asyncpg.create_pool(DATABASE_URL)
+async def create_pool():
+    return await asyncpg.create_pool(DATABASE_URL)
 
 # ---------- ЗАПУСК ----------
 

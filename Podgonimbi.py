@@ -45,6 +45,7 @@ class Form(StatesGroup):
     delete_media = State()
     preview = State()
     edit_menu = State()
+    admin_edit_text = State()
 
 
 # ---------- INLINE КЛАВИАТУРЫ ----------
@@ -289,6 +290,55 @@ async def reject_handler(callback: CallbackQuery):
 
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.answer("Отклонено ❌")
+
+# ---------- Редактировать текст ----------
+
+@dp.callback_query(F.data.startswith("edit_text_"))
+async def admin_edit_text_start(callback: CallbackQuery, state: FSMContext):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Не твоя кнопка 😎", show_alert=True)
+        return
+
+    submission_id = int(callback.data.split("_")[2])
+
+    await state.update_data(admin_submission_id=submission_id)
+    await state.set_state(Form.admin_edit_text)
+
+    await callback.message.answer(
+        "✏ Введи новый текст для этого подгона:"
+    )
+
+    await callback.answer()
+
+@dp.message(Form.admin_edit_text)
+async def admin_edit_text_save(message: Message, state: FSMContext):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    data = await state.get_data()
+    submission_id = data.get("admin_submission_id")
+
+    if not submission_id:
+        await state.clear()
+        return
+
+    new_text = message.text
+
+    conn = await dp["db"].acquire()
+
+    await conn.execute(
+        "UPDATE submissions SET text = $1 WHERE id = $2",
+        new_text,
+        submission_id
+    )
+
+    await dp["db"].release(conn)
+
+    await message.answer("✅ Текст обновлён!")
+
+    await state.clear()
 
 # ---------- CALLBACK ОБРАБОТЧИК ----------
 

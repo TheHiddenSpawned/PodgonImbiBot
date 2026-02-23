@@ -1,2 +1,2 @@
 # PodgonImbiBot
-My own telegram bot for seggestions
+My own Telegram bot for seggestions

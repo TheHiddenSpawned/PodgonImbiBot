@@ -100,8 +100,33 @@ def preview_kb():
         ]
     ])
 
-def moderation_kb(submission_id):
-    return InlineKeyboardMarkup(inline_keyboard=[
+def moderation_kb(submission_id, has_text: bool, has_media: bool):
+    buttons = []
+
+    if has_text:
+        buttons.append(
+            [InlineKeyboardButton(
+                text="✏ Изменить текст",
+                callback_data=f"edit_text_{submission_id}"
+            )]
+        )
+
+    if has_media:
+        buttons.append(
+            [InlineKeyboardButton(
+                text="🗑 Удалить медиа",
+                callback_data=f"edit_media_{submission_id}"
+            )]
+        )
+
+    buttons.append(
+        [InlineKeyboardButton(
+            text="👤 Изменить ник",
+            callback_data=f"edit_nick_{submission_id}"
+        )]
+    )
+
+    buttons.append(
         [
             InlineKeyboardButton(
                 text="✅ Опубликовать",
@@ -112,7 +137,9 @@ def moderation_kb(submission_id):
                 callback_data=f"reject_{submission_id}"
             )
         ]
-    ])
+    )
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def after_submit_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -601,35 +628,55 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                             ADMIN_ID,
                             file_id,
                             caption=caption,
-                            reply_markup=moderation_kb(submission_id)
+                            reply_markup=moderation_kb(
+                                submission_id,
+                                has_text=bool(user_data.get("text")),
+                                has_media=bool(media_list)
+                            )
                         )
                     elif media_type == "video":
                         await bot.send_video(
                             ADMIN_ID,
                             file_id,
                             caption=caption,
-                            reply_markup=moderation_kb(submission_id)
+                            reply_markup=moderation_kb(
+                                submission_id,
+                                has_text=bool(user_data.get("text")),
+                                has_media=bool(media_list)
+                            )
                         )
                     elif media_type == "document":
                         await bot.send_document(
                             ADMIN_ID,
                             file_id,
                             caption=caption,
-                            reply_markup=moderation_kb(submission_id)
+                            reply_markup=moderation_kb(
+                                submission_id,
+                                has_text=bool(user_data.get("text")),
+                                has_media=bool(media_list)
+                            )
                         )
                     elif media_type == "audio":
                         await bot.send_audio(
                             ADMIN_ID,
                             file_id,
                             caption=caption,
-                            reply_markup=moderation_kb(submission_id)
+                            reply_markup=moderation_kb(
+                                submission_id,
+                                has_text=bool(user_data.get("text")),
+                                has_media=bool(media_list)
+                            )
                         )
                     elif media_type == "voice":
                         await bot.send_voice(
                             ADMIN_ID,
                             file_id,
                             caption=caption,
-                            reply_markup=moderation_kb(submission_id)
+                            reply_markup=moderation_kb(
+                                submission_id,
+                                has_text=bool(user_data.get("text")),
+                                has_media=bool(media_list)
+                            )
                         )
                     first = False
                 else:
@@ -643,11 +690,16 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                         await bot.send_audio(ADMIN_ID, file_id)
                     elif media_type == "voice":
                         await bot.send_voice(ADMIN_ID, file_id)
+
         else:
             await bot.send_message(
                 ADMIN_ID,
                 caption,
-                reply_markup=moderation_kb(submission_id)
+                reply_markup=moderation_kb(
+                    submission_id,
+                    has_text=bool(user_data.get("text")),
+                    has_media=False
+                )
             )
 
         await state.clear()

@@ -324,7 +324,6 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
 
     data = await state.get_data()
     submission_id = data.get("admin_submission_id")
-    admin_message_id = data.get("admin_message_id")
 
     if not submission_id:
         await state.clear()
@@ -333,57 +332,22 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
     new_text = message.text
 
     conn = await dp["db"].acquire()
-
-    # обновляем текст
     await conn.execute(
         "UPDATE submissions SET text = $1 WHERE id = $2",
         new_text,
         submission_id
     )
-
-    # получаем обновлённую запись
-    submission = await conn.fetchrow(
-        "SELECT * FROM submissions WHERE id = $1",
-        submission_id
-    )
-
     await dp["db"].release(conn)
 
-    caption = f"🔥 Новый подгон\n\n👤 {submission['nickname']}"
+    # удаляем сообщение админа с текстом
+    await message.delete()
 
-    if submission["text"]:
-        caption += f"\n\n📝 {submission['text']}"
-
-    media_list = json.loads(submission["media"]) if submission["media"] else []
-
-    # если есть медиа — редактируем caption
-    if media_list:
-        try:
-            await bot.edit_message_caption(
-                chat_id=ADMIN_ID,
-                message_id=admin_message_id,
-                caption=caption,
-                reply_markup=moderation_kb(
-                    submission_id,
-                    has_text=bool(submission["text"]),
-                    has_media=bool(media_list)
-                )
-            )
-        except:
-            pass
-    else:
-        await bot.edit_message_text(
-            chat_id=ADMIN_ID,
-            message_id=admin_message_id,
-            text=caption,
-            reply_markup=moderation_kb(
-                submission_id,
-                has_text=bool(submission["text"]),
-                has_media=False
-            )
-        )
-
-    await message.answer("✅ Текст обновлён!")
+    # отправляем аккуратный alert
+    await bot.send_message(
+        ADMIN_ID,
+        "✅ Текст обновлён",
+        disable_notification=True
+    )
 
     await state.clear()
 

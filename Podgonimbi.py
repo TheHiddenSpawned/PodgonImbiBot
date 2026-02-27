@@ -354,9 +354,11 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
     if submission["text"]:
         caption += f"\n\n📝 {submission['text']}"
 
+    media_list = submission["media"] or []
+
     # 🔹 Перерисовываем карточку
     try:
-        if submission["media"]:  # если есть фото/видео
+        if len(media_list) > 0:
             await bot.edit_message_caption(
                 caption=caption,
                 chat_id=message.chat.id,
@@ -364,7 +366,7 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
                 reply_markup=moderation_kb(
                     submission_id,
                     has_text=bool(submission["text"]),
-                    has_media=bool(submission["media"])
+                    has_media=True
                 )
             )
         else:
@@ -375,11 +377,11 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
                 reply_markup=moderation_kb(
                     submission_id,
                     has_text=bool(submission["text"]),
-                    has_media=bool(submission["media"])
+                    has_media=False
                 )
             )
-    except:
-        pass
+    except Exception as e:
+        print("EDIT ERROR:", e)
 
     # 🔹 Удаляем сообщение админа
     await message.delete()

@@ -1093,7 +1093,6 @@ async def get_media(message: Message, state: FSMContext):
         history.append(current)
 
     await state.update_data(history=history)
-    await state.set_state(Form.media_menu)
 
     await message.answer(
         f"Медиа добавлено ({len(media_list)}/10) ✅\n"

@@ -302,19 +302,16 @@ async def admin_edit_text_start(callback: CallbackQuery, state: FSMContext):
 
     submission_id = int(callback.data.split("_")[2])
 
-    await state.update_data(admin_submission_id=submission_id)
-    await state.set_state(Form.admin_edit_text)
-
-    await callback.message.answer(
+    msg = await callback.message.answer(
         "✏ Введи новый текст для этого подгона:"
     )
 
-    await callback.answer()
-
     await state.update_data(
         admin_submission_id=submission_id,
-        admin_message_id=callback.message.message_id
+        admin_prompt_message_id=msg.message_id  # <-- сохраняем ID
     )
+
+    await state.set_state(Form.admin_edit_text)
 
 @dp.message(Form.admin_edit_text)
 async def admin_edit_text_save(message: Message, state: FSMContext):
@@ -324,6 +321,7 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
 
     data = await state.get_data()
     submission_id = data.get("admin_submission_id")
+    prompt_message_id = data.get("admin_prompt_message_id")
 
     if not submission_id:
         await state.clear()
@@ -339,13 +337,20 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
     )
     await dp["db"].release(conn)
 
-    # удаляем сообщение админа с текстом
+    # 1️⃣ удаляем сообщение админа
     await message.delete()
 
-    # показываем подтверждение
-    msg = await message.answer("✅ Текст обновлён")
+    # 2️⃣ удаляем сообщение "Введи новый текст..."
+    if prompt_message_id:
+        await bot.delete_message(ADMIN_ID, prompt_message_id)
+
+    # 3️⃣ показываем подтверждение
+    confirm_msg = await bot.send_message(ADMIN_ID, "✅ Текст обновлён")
+
     await asyncio.sleep(1.2)
-    await msg.delete()
+
+    # 4️⃣ удаляем подтверждение
+    await confirm_msg.delete()
 
     await state.clear()
 

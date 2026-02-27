@@ -342,17 +342,21 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
 
     # 2️⃣ удаляем сообщение "Введи новый текст..."
     if prompt_message_id:
-        await bot.delete_message(ADMIN_ID, prompt_message_id)
+        try:
+            await bot.delete_message(message.chat.id, prompt_message_id)
+        except:
+            pass
 
-    # 3️⃣ показываем подтверждение
-    confirm_msg = await bot.send_message(ADMIN_ID, "✅ Текст обновлён")
+    # 3️⃣ подтверждение
+    confirm_msg = await message.answer("✅ Текст обновлён")
 
-    await asyncio.sleep(1.2)
+    await asyncio.sleep(2.5)
 
     # 4️⃣ удаляем подтверждение
-    await confirm_msg.delete()
-
-    await state.clear()
+    try:
+        await confirm_msg.delete()
+    except:
+        pass
 
 # ---------- CALLBACK ОБРАБОТЧИК ----------
 

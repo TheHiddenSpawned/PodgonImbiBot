@@ -315,6 +315,29 @@ async def admin_edit_text_start(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(Form.admin_edit_text)
 
+@dp.callback_query(F.data.startswith("edit_nick_"))
+async def admin_edit_nickname_start(callback: CallbackQuery, state: FSMContext):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Не твоя кнопка 😎", show_alert=True)
+        return
+
+    submission_id = int(callback.data.split("_")[2])
+
+    msg = await callback.message.answer(
+        "✏️ Введи новый ник для этого подгона:"
+    )
+
+    await state.update_data(
+        submission_id=submission_id,
+        prompt_message_id=msg.message_id,
+        panel_message_id=callback.message.message_id
+    )
+
+    await state.set_state(Form.admin_edit_nickname)
+
+    await callback.answer()
+
 @dp.message(Form.admin_edit_text)
 async def admin_edit_text_save(message: Message, state: FSMContext):
 
@@ -340,23 +363,6 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
         new_text,
         submission_id
     )
-
-    @dp.callback_query(lambda c: c.data.startswith("edit_nickname:"))
-    async def admin_edit_nickname(callback: CallbackQuery, state: FSMContext):
-        submission_id = int(callback.data.split(":")[1])
-
-        await state.update_data(
-            submission_id=submission_id,
-            panel_message_id=callback.message.message_id
-        )
-
-        await state.set_state(Form.admin_edit_nickname)
-
-        prompt = await callback.message.answer("✏️ Введи новый ник для этого подгона:")
-
-        await state.update_data(prompt_message_id=prompt.message_id)
-
-        await callback.answer()
 
     # 🔹 Получаем обновлённую запись
     submission = await conn.fetchrow(
@@ -973,6 +979,12 @@ async def process_delete_media(message: Message, state: FSMContext):
 @dp.message(Form.admin_edit_nickname)
 async def admin_edit_nickname_save(message: Message, state: FSMContext):
     data = await state.get_data()
+
+    reply_markup=moderation_kb(
+        submission_id,
+        has_text=bool(submission["text"]),
+        has_media=bool(media_list)
+    )
 
     submission_id = data["submission_id"]
     panel_message_id = data["panel_message_id"]

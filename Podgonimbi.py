@@ -1014,8 +1014,11 @@ async def create_pool():
 
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)
+
+    # 🔹 Сначала создаём пул
     dp["db"] = await create_pool()
 
+    # 🔹 Создаём таблицы
     async with dp["db"].acquire() as conn:
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -1036,6 +1039,8 @@ async def main():
                 created_at TIMESTAMP DEFAULT NOW()
             );
         """)
+
+    # 🔹 И ТОЛЬКО ПОТОМ запускаем polling
     await dp.start_polling(bot)
 
 def run_http():

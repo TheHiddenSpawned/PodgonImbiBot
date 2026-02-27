@@ -748,7 +748,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
     # ---------------- MEDIA ----------------
     if data == "send_media":
         await state.update_data(media=[])
-        await go(Form.waiting_media)
+        await go(Form.media)
 
         await safe_edit(
             "Отправь медиа 📎 (можно несколько подряд)",
@@ -761,7 +761,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
 
     if data == "add_media":
-        await go(Form.waiting_media)
+        await go(Form.media)
 
         await safe_edit(
             "Отправь медиа 📎 (можно несколько подряд)",

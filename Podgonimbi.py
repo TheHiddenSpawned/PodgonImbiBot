@@ -47,6 +47,7 @@ class Form(StatesGroup):
     edit_menu = State()
     admin_edit_text = State()
     admin_edit_nickname = State()
+    admin_delete_media = State()
 
 
 # ---------- INLINE КЛАВИАТУРЫ ----------
@@ -315,6 +316,8 @@ async def admin_edit_text_start(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(Form.admin_edit_text)
 
+# ---------- Редактировать ник ----------
+
 @dp.callback_query(F.data.startswith("edit_nick_"))
 async def admin_edit_nickname_start(callback: CallbackQuery, state: FSMContext):
 
@@ -336,6 +339,48 @@ async def admin_edit_nickname_start(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(Form.admin_edit_nickname)
 
+    await callback.answer()
+
+# ---------- Редактировать медиа ----------
+
+@dp.callback_query(F.data.startswith("edit_media_"))
+async def admin_delete_media_start(callback: CallbackQuery, state: FSMContext):
+
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Не твоя кнопка 😎", show_alert=True)
+        return
+
+    submission_id = int(callback.data.split("_")[2])
+
+    conn = await dp["db"].acquire()
+    submission = await conn.fetchrow(
+        "SELECT * FROM submissions WHERE id = $1",
+        submission_id
+    )
+    await dp["db"].release(conn)
+
+    media_raw = submission["media"]
+
+    if isinstance(media_raw, str):
+        media_list = json.loads(media_raw)
+    else:
+        media_list = media_raw or []
+
+    if not media_list:
+        await callback.answer("Медиа нет ❌", show_alert=True)
+        return
+
+    msg = await callback.message.answer(
+        f"🗑 Введи номер медиа для удаления (1–{len(media_list)}):"
+    )
+
+    await state.update_data(
+        admin_submission_id=submission_id,
+        admin_panel_message_id=callback.message.message_id,
+        admin_prompt_message_id=msg.message_id
+    )
+
+    await state.set_state(Form.admin_delete_media)
     await callback.answer()
 
 @dp.message(Form.admin_edit_text)
@@ -424,6 +469,107 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
 
     # 🔹 Подтверждение
     confirm_msg = await message.answer("✅ Текст обновлён")
+    await asyncio.sleep(2.5)
+
+    try:
+        await confirm_msg.delete()
+    except:
+        pass
+
+    await state.clear()
+
+@dp.message(Form.admin_delete_media)
+async def admin_delete_media_process(message: Message, state: FSMContext):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    if not message.text.isdigit():
+        await message.answer("Нужно ввести цифру 👀")
+        return
+
+    index = int(message.text) - 1
+
+    data = await state.get_data()
+    submission_id = data.get("admin_submission_id")
+    panel_message_id = data.get("admin_panel_message_id")
+    prompt_message_id = data.get("admin_prompt_message_id")
+
+    conn = await dp["db"].acquire()
+    submission = await conn.fetchrow(
+        "SELECT * FROM submissions WHERE id = $1",
+        submission_id
+    )
+
+    media_raw = submission["media"]
+
+    if isinstance(media_raw, str):
+        media_list = json.loads(media_raw)
+    else:
+        media_list = media_raw or []
+
+    if index < 0 or index >= len(media_list):
+        await message.answer("Такого номера нет 😕")
+        await dp["db"].release(conn)
+        return
+
+    media_list.pop(index)
+
+    await conn.execute(
+        "UPDATE submissions SET media = $1 WHERE id = $2",
+        json.dumps(media_list),
+        submission_id
+    )
+
+    submission = await conn.fetchrow(
+        "SELECT * FROM submissions WHERE id = $1",
+        submission_id
+    )
+
+    await dp["db"].release(conn)
+
+    # --- новый caption ---
+    caption = f"🔥 Новый подгон\n\n👤 {submission['nickname']}"
+
+    if submission["text"]:
+        caption += f"\n\n📝 {submission['text']}"
+
+    try:
+        if media_list:
+            await bot.edit_message_caption(
+                chat_id=message.chat.id,
+                message_id=panel_message_id,
+                caption=caption,
+                reply_markup=moderation_kb(
+                    submission_id,
+                    has_text=bool(submission["text"]),
+                    has_media=True
+                )
+            )
+        else:
+            await bot.edit_message_text(
+                caption,
+                chat_id=message.chat.id,
+                message_id=panel_message_id,
+                reply_markup=moderation_kb(
+                    submission_id,
+                    has_text=bool(submission["text"]),
+                    has_media=False
+                )
+            )
+    except Exception as e:
+        print("ADMIN DELETE MEDIA ERROR:", e)
+
+    # --- чистка ---
+    await message.delete()
+
+    if prompt_message_id:
+        try:
+            await bot.delete_message(message.chat.id, prompt_message_id)
+        except:
+            pass
+
+    confirm_msg = await message.answer("✅ Медиа удалено!")
     await asyncio.sleep(2.5)
 
     try:

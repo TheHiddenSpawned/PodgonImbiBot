@@ -1014,7 +1014,6 @@ async def create_pool():
 
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
     dp["db"] = await create_pool()
 
     async with dp["db"].acquire() as conn:

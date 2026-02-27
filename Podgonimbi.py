@@ -1005,7 +1005,20 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                     has_media=False
                 )
             )
+        # --- ЧИСТИМ ПОЛЬЗОВАТЕЛЬСКИЙ СРАЧ ---
 
+        try:
+            # удаляем сообщение с кнопкой "Публикуем?"
+            await callback.message.delete()
+        except:
+            pass
+
+        # удаляем 10 последних сообщений бота (которые могли быть предпросмотром)
+        for i in range(1, 15):
+            try:
+                await bot.delete_message(callback.from_user.id, callback.message.message_id - i)
+            except:
+                pass
         await state.clear()
 
         await callback.message.answer(

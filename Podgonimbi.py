@@ -1043,7 +1043,7 @@ async def get_text(message: Message, state: FSMContext):
 
 # ---------- МЕДИА ----------
 
-@dp.message(Form.waiting_media)
+@dp.message(Form.media_menu)
 async def get_media(message: Message, state: FSMContext):
 
     if message.content_type not in [

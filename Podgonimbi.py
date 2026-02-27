@@ -666,12 +666,14 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             )
 
         elif prev_state == Form.media_menu:
+            user_data = await state.get_data()
             media = user_data.get("media", [])
+
             await safe_edit(
                 f"Медиа добавлено ({len(media)}/10) ✅\n"
                 "Можешь отправить ещё или перейти дальше.",
                 after_media_kb()
-            )
+        )
 
         elif prev_state == Form.nickname:
             await safe_edit(

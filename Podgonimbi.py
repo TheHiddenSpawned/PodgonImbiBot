@@ -354,7 +354,12 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
     if submission["text"]:
         caption += f"\n\n📝 {submission['text']}"
 
-    media_list = submission["media"] or []
+    media_raw = submission["media"]
+
+    if isinstance(media_raw, str):
+        media_list = json.loads(media_raw)
+    else:
+        media_list = media_raw or []
 
     # 🔹 Перерисовываем карточку
     try:

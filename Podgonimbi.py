@@ -744,8 +744,21 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
         return
 
     # ---------------- MEDIA ----------------
-    if data in ["send_media", "add_media"]:
+    if data == "send_media":
         await state.update_data(media=[])
+        await go(Form.waiting_media)
+
+        await safe_edit(
+            "Отправь медиа 📎 (можно несколько подряд)",
+            InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔄 Назад", callback_data="back")],
+            [InlineKeyboardButton(text="🏠 В начало", callback_data="home")]
+            ])
+        )
+        return
+
+
+    if data == "add_media":
         await go(Form.waiting_media)
 
         await safe_edit(

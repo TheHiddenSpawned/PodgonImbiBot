@@ -46,6 +46,7 @@ class Form(StatesGroup):
     preview = State()
     edit_menu = State()
     admin_edit_text = State()
+    admin_edit_nickname = State()
 
 
 # ---------- INLINE КЛАВИАТУРЫ ----------
@@ -339,6 +340,23 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
         new_text,
         submission_id
     )
+
+    @dp.callback_query(lambda c: c.data.startswith("edit_nickname:"))
+    async def admin_edit_nickname(callback: CallbackQuery, state: FSMContext):
+        submission_id = int(callback.data.split(":")[1])
+
+        await state.update_data(
+            submission_id=submission_id,
+            panel_message_id=callback.message.message_id
+        )
+
+        await state.set_state(Form.admin_edit_nickname)
+
+        prompt = await callback.message.answer("✏️ Введи новый ник для этого подгона:")
+
+        await state.update_data(prompt_message_id=prompt.message_id)
+
+        await callback.answer()
 
     # 🔹 Получаем обновлённую запись
     submission = await conn.fetchrow(
@@ -951,6 +969,66 @@ async def process_delete_media(message: Message, state: FSMContext):
         f"Осталось файлов: {len(media_list)}/10",
         reply_markup=after_media_kb()
     )    
+
+@dp.message(Form.admin_edit_nickname)
+async def admin_edit_nickname_save(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    submission_id = data["submission_id"]
+    panel_message_id = data["panel_message_id"]
+    prompt_message_id = data["prompt_message_id"]
+
+    new_nickname = message.text.strip()
+
+    conn = await dp["db"].acquire()
+    try:
+        await conn.execute(
+            "UPDATE submissions SET nickname = $1 WHERE id = $2",
+            new_nickname,
+            submission_id
+        )
+
+        submission = await conn.fetchrow(
+            "SELECT * FROM submissions WHERE id = $1",
+            submission_id
+        )
+    finally:
+        await dp["db"].release(conn)
+
+    # --- обработка media (как мы уже чинили) ---
+    media_raw = submission["media"]
+
+    if isinstance(media_raw, str):
+        media_list = json.loads(media_raw)
+    else:
+        media_list = media_raw or []
+
+    caption = (
+        f"🆔 ID: {submission['id']}\n"
+        f"👤 Ник: {new_nickname}\n\n"
+        f"{submission['text']}"
+    )
+
+    try:
+        await message.bot.edit_message_caption(
+            chat_id=message.chat.id,
+            message_id=panel_message_id,
+            caption=caption,
+            reply_markup=admin_keyboard(submission_id)
+        )
+    except Exception as e:
+        print("NICK EDIT ERROR:", e)
+
+    # --- уведомление ---
+    confirm_msg = await message.answer("✅ Ник изменён!")
+
+    await asyncio.sleep(2.5)
+
+    await confirm_msg.delete()
+    await message.delete()
+    await message.bot.delete_message(message.chat.id, prompt_message_id)
+
+    await state.clear()
     
 # ---------- Ник ----------
 @dp.message(Form.custom_nickname)

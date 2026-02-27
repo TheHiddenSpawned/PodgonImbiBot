@@ -342,12 +342,10 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
     # удаляем сообщение админа с текстом
     await message.delete()
 
-    # отправляем аккуратный alert
-    await bot.send_message(
-        ADMIN_ID,
-        "✅ Текст обновлён",
-        disable_notification=True
-    )
+    # показываем подтверждение
+    msg = await message.answer("✅ Текст обновлён")
+    await asyncio.sleep(1.2)
+    await msg.delete()
 
     await state.clear()
 

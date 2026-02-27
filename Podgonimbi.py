@@ -978,36 +978,45 @@ async def process_delete_media(message: Message, state: FSMContext):
 
 @dp.message(Form.admin_edit_nickname)
 async def admin_edit_nickname_save(message: Message, state: FSMContext):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
     data = await state.get_data()
 
-    reply_markup=moderation_kb(
-        submission_id,
-        has_text=bool(submission["text"]),
-        has_media=bool(media_list)
-    )
+    submission_id = data.get("submission_id")
+    panel_message_id = data.get("panel_message_id")
+    prompt_message_id = data.get("prompt_message_id")
 
-    submission_id = data["submission_id"]
-    panel_message_id = data["panel_message_id"]
-    prompt_message_id = data["prompt_message_id"]
+    if not submission_id:
+        await state.clear()
+        return
 
     new_nickname = message.text.strip()
 
     conn = await dp["db"].acquire()
-    try:
-        await conn.execute(
-            "UPDATE submissions SET nickname = $1 WHERE id = $2",
-            new_nickname,
-            submission_id
-        )
 
-        submission = await conn.fetchrow(
-            "SELECT * FROM submissions WHERE id = $1",
-            submission_id
-        )
-    finally:
-        await dp["db"].release(conn)
+    # 🔹 Обновляем ник
+    await conn.execute(
+        "UPDATE submissions SET nickname = $1 WHERE id = $2",
+        new_nickname,
+        submission_id
+    )
 
-    # --- обработка media (как мы уже чинили) ---
+    # 🔹 Получаем обновлённую запись
+    submission = await conn.fetchrow(
+        "SELECT * FROM submissions WHERE id = $1",
+        submission_id
+    )
+
+    await dp["db"].release(conn)
+
+    # 🔹 Формируем caption
+    caption = f"🔥 Новый подгон\n\n👤 {submission['nickname']}"
+
+    if submission["text"]:
+        caption += f"\n\n📝 {submission['text']}"
+
     media_raw = submission["media"]
 
     if isinstance(media_raw, str):
@@ -1015,30 +1024,51 @@ async def admin_edit_nickname_save(message: Message, state: FSMContext):
     else:
         media_list = media_raw or []
 
-    caption = (
-        f"🆔 ID: {submission['id']}\n"
-        f"👤 Ник: {new_nickname}\n\n"
-        f"{submission['text']}"
-    )
-
+    # 🔹 Обновляем админскую карточку
     try:
-        await message.bot.edit_message_caption(
-            chat_id=message.chat.id,
-            message_id=panel_message_id,
-            caption=caption,
-            reply_markup=admin_keyboard(submission_id)
-        )
+        if len(media_list) > 0:
+            await bot.edit_message_caption(
+                chat_id=message.chat.id,
+                message_id=panel_message_id,
+                caption=caption,
+                reply_markup=moderation_kb(
+                    submission_id,
+                    has_text=bool(submission["text"]),
+                    has_media=True
+                )
+            )
+        else:
+            await bot.edit_message_text(
+                caption,
+                chat_id=message.chat.id,
+                message_id=panel_message_id,
+                reply_markup=moderation_kb(
+                    submission_id,
+                    has_text=bool(submission["text"]),
+                    has_media=False
+                )
+            )
     except Exception as e:
         print("NICK EDIT ERROR:", e)
 
-    # --- уведомление ---
-    confirm_msg = await message.answer("✅ Ник изменён!")
+    # 🔹 Удаляем сообщение админа
+    await message.delete()
 
+    # 🔹 Удаляем "Введите новый ник"
+    if prompt_message_id:
+        try:
+            await bot.delete_message(message.chat.id, prompt_message_id)
+        except:
+            pass
+
+    # 🔹 Показываем уведомление
+    confirm_msg = await message.answer("✅ Ник изменён!")
     await asyncio.sleep(2.5)
 
-    await confirm_msg.delete()
-    await message.delete()
-    await message.bot.delete_message(message.chat.id, prompt_message_id)
+    try:
+        await confirm_msg.delete()
+    except:
+        pass
 
     await state.clear()
     

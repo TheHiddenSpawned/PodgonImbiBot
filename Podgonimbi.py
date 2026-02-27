@@ -308,7 +308,8 @@ async def admin_edit_text_start(callback: CallbackQuery, state: FSMContext):
 
     await state.update_data(
         admin_submission_id=submission_id,
-        admin_prompt_message_id=msg.message_id  # <-- сохраняем ID
+        admin_prompt_message_id=msg.message_id,
+        admin_panel_message_id=callback.message.message_id
     )
 
     await state.set_state(Form.admin_edit_text)
@@ -322,6 +323,7 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
     data = await state.get_data()
     submission_id = data.get("admin_submission_id")
     prompt_message_id = data.get("admin_prompt_message_id")
+    panel_message_id = data.get("admin_panel_message_id")
 
     if not submission_id:
         await state.clear()
@@ -330,33 +332,75 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
     new_text = message.text
 
     conn = await dp["db"].acquire()
+
+    # 🔹 Обновляем текст
     await conn.execute(
         "UPDATE submissions SET text = $1 WHERE id = $2",
         new_text,
         submission_id
     )
+
+    # 🔹 Получаем обновлённую запись
+    submission = await conn.fetchrow(
+        "SELECT * FROM submissions WHERE id = $1",
+        submission_id
+    )
+
     await dp["db"].release(conn)
 
-    # 1️⃣ удаляем сообщение админа
+    # 🔹 Собираем новый caption
+    caption = f"🔥 Новый подгон\n\n👤 {submission['nickname']}"
+
+    if submission["text"]:
+        caption += f"\n\n📝 {submission['text']}"
+
+    # 🔹 Перерисовываем карточку
+    try:
+        if submission["media"]:  # если есть фото/видео
+            await bot.edit_message_caption(
+                caption=caption,
+                chat_id=message.chat.id,
+                message_id=panel_message_id,
+                reply_markup=moderation_kb(
+                    submission_id,
+                    has_text=bool(submission["text"]),
+                    has_media=bool(submission["media"])
+                )
+            )
+        else:
+            await bot.edit_message_text(
+                caption,
+                chat_id=message.chat.id,
+                message_id=panel_message_id,
+                reply_markup=moderation_kb(
+                    submission_id,
+                    has_text=bool(submission["text"]),
+                    has_media=bool(submission["media"])
+                )
+            )
+    except:
+        pass
+
+    # 🔹 Удаляем сообщение админа
     await message.delete()
 
-    # 2️⃣ удаляем сообщение "Введи новый текст..."
+    # 🔹 Удаляем "Введите новый текст..."
     if prompt_message_id:
         try:
             await bot.delete_message(message.chat.id, prompt_message_id)
         except:
             pass
 
-    # 3️⃣ подтверждение
+    # 🔹 Подтверждение
     confirm_msg = await message.answer("✅ Текст обновлён")
-
     await asyncio.sleep(2.5)
 
-    # 4️⃣ удаляем подтверждение
     try:
         await confirm_msg.delete()
     except:
         pass
+
+    await state.clear()
 
 # ---------- CALLBACK ОБРАБОТЧИК ----------
 

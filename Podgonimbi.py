@@ -931,68 +931,68 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
             media_group = []
 
-                for i, (media_type, file_id) in enumerate(media_list):
+            for i, (media_type, file_id) in enumerate(media_list):
 
-                    if media_type == "photo":
-                        media = InputMediaPhoto(
-                            media=file_id,
-                            caption=caption if i == 0 else None
-                        )
-
-                    elif media_type == "video":
-                        media = InputMediaVideo(
-                            media=file_id,
-                            caption=caption if i == 0 else None
-                        )
-
-                    elif media_type == "document":
-                        media = InputMediaDocument(
-                            media=file_id,
-                            caption=caption if i == 0 else None
-                        )
-
-                    elif media_type == "audio":
-                        media = InputMediaAudio(
-                            media=file_id,
-                            caption=caption if i == 0 else None
-                        )
-
-                    elif media_type == "voice":
-                        # voice нельзя в media_group — отправляем отдельно
-                        await bot.send_voice(ADMIN_ID, file_id)
-                        continue
-
-                    else:
-                        continue
-
-                    media_group.append(media)
-
-                if media_group:
-                    sent_messages = await bot.send_media_group(
-                        chat_id=ADMIN_ID,
-                        media=media_group
-                    )
-
-                    await bot.edit_message_reply_markup(
-                        chat_id=ADMIN_ID,
-                        message_id=sent_messages[0].message_id,
-                        reply_markup=moderation_kb(
-                            submission_id,
-                            has_text=bool(user_data.get("text")),
-                            has_media=True
-                        )
-                    )
-
-            else:
-                await bot.send_message(
-                    ADMIN_ID,
-                    caption,
-                    reply_markup=moderation_kb(
-                        submission_id,
-                        has_text=bool(user_data.get("text")),
-                        has_media=False
-                    )
+                if media_type == "photo":
+                    media = InputMediaPhoto(
+                    media=file_id,
+                    caption=caption if i == 0 else None
                 )
+
+                elif media_type == "video":
+                    media = InputMediaVideo(
+                        media=file_id,
+                        caption=caption if i == 0 else None
+                    )
+
+                elif media_type == "document":
+                    media = InputMediaDocument(
+                        media=file_id,
+                        caption=caption if i == 0 else None
+                    )
+
+                elif media_type == "audio":
+                    media = InputMediaAudio(
+                        media=file_id,
+                        caption=caption if i == 0 else None
+                    )
+
+                elif media_type == "voice":
+                    # voice нельзя в media_group — отправляем отдельно
+                    await bot.send_voice(ADMIN_ID, file_id)
+                    continue
+
+                else:
+                    continue
+
+                media_group.append(media)
+
+        if media_group:
+            sent_messages = await bot.send_media_group(
+                chat_id=ADMIN_ID,
+                media=media_group
+            )
+
+            await bot.edit_message_reply_markup(
+                chat_id=ADMIN_ID,
+                message_id=sent_messages[0].message_id,
+                reply_markup=moderation_kb(
+                    submission_id,
+                    has_text=bool(user_data.get("text")),
+                    has_media=True
+                )
+            )
+
+    else:
+        await bot.send_message(
+            ADMIN_ID,
+            caption,
+            reply_markup=moderation_kb(
+                submission_id,
+                has_text=bool(user_data.get("text")),
+                has_media=False
+            )
+        )
         # --- ЧИСТИМ ПОЛЬЗОВАТЕЛЬСКИЙ СРАЧ ---
 
         try:

@@ -927,52 +927,52 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
         await dp["db"].release(conn)
 
-       if media_list:
-           first = True
-           for media_type, file_id in media_list:
-               if first:
-                   send_func = {
-                       "photo": bot.send_photo,
-                       "video": bot.send_video,
-                       "document": bot.send_document,
-                       "audio": bot.send_audio,
-                       "voice": bot.send_voice,
-                   }.get(media_type)
+        if media_list:
+            first = True
+            for media_type, file_id in media_list:
+                if first:
+                    send_func = {
+                        "photo": bot.send_photo,
+                        "video": bot.send_video,
+                        "document": bot.send_document,
+                        "audio": bot.send_audio,
+                        "voice": bot.send_voice,
+                    }.get(media_type)
 
-                   if send_func:
-                       await send_func(
-                           ADMIN_ID,
-                           file_id,
-                           caption=caption,
-                           reply_markup=moderation_kb(
-                               submission_id,
-                               has_text=bool(user_data.get("text")),
-                               has_media=True
-                           )
-                       )
-                   first = False
-               else:
-                   send_func = {
-                       "photo": bot.send_photo,
-                       "video": bot.send_video,
-                       "document": bot.send_document,
-                       "audio": bot.send_audio,
-                       "voice": bot.send_voice,
-                   }.get(media_type)
+                    if send_func:
+                        await send_func(
+                            ADMIN_ID,
+                            file_id,
+                            caption=caption,
+                            reply_markup=moderation_kb(
+                                submission_id,
+                                has_text=bool(user_data.get("text")),
+                                has_media=True
+                            )
+                        )
+                    first = False
+                else:
+                    send_func = {
+                        "photo": bot.send_photo,
+                        "video": bot.send_video,
+                        "document": bot.send_document,
+                        "audio": bot.send_audio,
+                        "voice": bot.send_voice,
+                    }.get(media_type)
 
-                   if send_func:
-                       await send_func(ADMIN_ID, file_id)
+                    if send_func:
+                        await send_func(ADMIN_ID, file_id)
 
-       else:
-           await bot.send_message(
-               ADMIN_ID,
-               caption,
-               reply_markup=moderation_kb(
-                   submission_id,
-                   has_text=bool(user_data.get("text")),
-                   has_media=False
-               )
-           )
+        else:
+            await bot.send_message(
+                ADMIN_ID,
+                caption,
+                reply_markup=moderation_kb(
+                    submission_id,
+                    has_text=bool(user_data.get("text")),
+                    has_media=False
+                )
+            )
         # --- ЧИСТИМ ПОЛЬЗОВАТЕЛЬСКИЙ СРАЧ ---
 
         try:

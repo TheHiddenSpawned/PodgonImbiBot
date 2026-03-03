@@ -784,20 +784,48 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
         if user_data.get("final_nick"):
             await state.set_state(Form.preview)
 
-            await safe_edit(
+            nickname = user_data.get("final_nick")
+            caption = f"🔥 Вот как будет выглядеть пост:\n\n👤 {nickname}"
+
+            if user_data.get("text"):
+                caption += f"\n\n📝 {user_data['text']}"
+
+            media_list = user_data.get("media", [])
+
+            if media_list:
+                first = True
+                for media_type, file_id in media_list:
+                    if first:
+                        if media_type == "photo":
+                            await bot.send_photo(callback.from_user.id, file_id, caption=caption)
+                        elif media_type == "video":
+                            await bot.send_video(callback.from_user.id, file_id, caption=caption)
+                        elif media_type == "document":
+                           await bot.send_document(callback.from_user.id, file_id, caption=caption)
+                        elif media_type == "audio":
+                            await bot.send_audio(callback.from_user.id, file_id, caption=caption)
+                        elif media_type == "voice":
+                            await bot.send_voice(callback.from_user.id, file_id, caption=caption)
+                        first = False
+                    else:
+                        if media_type == "photo":
+                            await bot.send_photo(callback.from_user.id, file_id)
+                        elif media_type == "video":
+                            await bot.send_video(callback.from_user.id, file_id)
+                        elif media_type == "document":
+                            await bot.send_document(callback.from_user.id, file_id)
+                        elif media_type == "audio":
+                            await bot.send_audio(callback.from_user.id, file_id)
+                        elif media_type == "voice":
+                            await bot.send_voice(callback.from_user.id, file_id)
+            else:
+                await callback.message.answer(caption)
+
+            await callback.message.answer(
                 "Публикуем?",
-                preview_kb()
+                reply_markup=preview_kb()
             )
             return
-
-        # иначе выбираем ник
-        await go(Form.nickname)
-
-        await safe_edit(
-            "Как подписать подгон?",
-            nick_kb()
-        )
-        return
         
         # ---------- DELETE MEDIA ----------
     if data == "delete_media":

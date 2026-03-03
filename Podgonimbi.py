@@ -322,7 +322,7 @@ async def admin_edit_text_start(callback: CallbackQuery, state: FSMContext):
 
 # ---------- Редактировать ник ----------
 
-@dp.callback_query(F.data.startswith("edit_nick_"))
+@dp.callback_query(F.data.regexp(r"^edit_nick_\d+$"))
 async def admin_edit_nickname_start(callback: CallbackQuery, state: FSMContext):
 
     if callback.from_user.id != ADMIN_ID:
@@ -798,7 +798,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
         # если ник уже выбран — сразу превью
         if user_data.get("final_nick"):
-            await go(Form.preview)
+            await state.set_state(Form.preview)
 
             nickname = user_data.get("final_nick")
             caption = f"🔥 Вот как будет выглядеть пост:\n\n👤 {nickname}"
@@ -951,7 +951,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             reply_markup=preview_kb()
         )
 
-        await go(Form.preview)
+        await state.set_state(Form.preview)
         return
     
     # ---------- ПОДТВЕРЖДЕНИЕ ПУБЛИКАЦИИ ----------
@@ -1144,7 +1144,7 @@ async def get_text(message: Message, state: FSMContext):
             reply_markup=preview_kb()
         )
 
-        await go(Form.preview)
+        await state.set_state(Form.preview)
         return
 
     # если это первый ввод текста
@@ -1204,7 +1204,7 @@ async def back_to_preview(callback: CallbackQuery, state: FSMContext):
         reply_markup=preview_kb()
     )
 
-    await go(Form.preview)
+    await state.set_state(Form.preview)
     await callback.answer()
 
 # ---------- МЕДИА ----------
@@ -1462,7 +1462,7 @@ async def get_custom_nick(message: Message, state: FSMContext):
         reply_markup=preview_kb()
     )
 
-    await go(Form.preview)
+    await state.set_state(Form.preview)
     
 async def create_pool():
     return await asyncpg.create_pool(DATABASE_URL)

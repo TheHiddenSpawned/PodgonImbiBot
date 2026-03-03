@@ -782,7 +782,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
         # если ник уже выбран — сразу превью
         if user_data.get("final_nick"):
-            await state.set_state(Form.preview)
+            await go(Form.preview)
 
             nickname = user_data.get("final_nick")
             caption = f"🔥 Вот как будет выглядеть пост:\n\n👤 {nickname}"
@@ -935,9 +935,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             reply_markup=preview_kb()
         )
 
-        current = await state.get_state()
-        await state.update_data(prev_state=current)
-        await state.set_state(Form.preview)
+        await go(Form.preview)
         return
     
     # ---------- ПОДТВЕРЖДЕНИЕ ПУБЛИКАЦИИ ----------

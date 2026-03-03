@@ -1107,11 +1107,20 @@ async def get_media(message: Message, state: FSMContext):
 
     await state.update_data(history=history)
 
-    await message.answer(
-        f"Медиа добавлено ({len(media_list)}/10) ✅\n"
-        "Можешь отправить ещё или перейти дальше.",
-        reply_markup=after_media_kb()
-    )
+    current_count = len(media_list)
+
+    if current_count < 10:
+        await message.answer(
+            f"Медиа добавлено ({current_count}/10) ✅\n"
+            "Можешь отправить ещё или перейти дальше.",
+            reply_markup=after_media_kb()
+        )
+    else:
+        await message.answer(
+            "✅ Добавлено 10/10 медиа.\n\n"
+            "Лимит достигнут. Теперь можешь перейти дальше.",
+            reply_markup=after_media_kb()
+        )
     
 @dp.message(Form.delete_media)
 async def process_delete_media(message: Message, state: FSMContext):

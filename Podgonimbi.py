@@ -623,7 +623,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
         return
 
     # ---------------- BACK ----------------
-    if data == "back":
+    elif data == "back":
 
         user_data = await state.get_data()
         history = user_data.get("history", [])
@@ -709,7 +709,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                 edit_kb(has_text, has_media)
             )
 
-    if data == "edit_menu":
+    elif data == "edit_menu":
         user_data = await state.get_data()
 
         has_text = bool(user_data.get("text"))

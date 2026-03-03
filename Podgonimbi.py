@@ -928,9 +928,67 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
         await dp["db"].release(conn)
 
         if media_list:
-            first = True
-            for media_type, file_id in media_list:
-                if first:
+
+            media_types = {media_type for media_type, _ in media_list}
+
+            # Проверяем можно ли делать media_group
+            can_group = (
+                len(media_types) == 1
+                and list(media_types)[0] in ["photo", "video", "audio"]
+            )
+
+            if can_group and len(media_list) > 1:
+
+                from aiogram.types import (
+                    InputMediaPhoto,
+                    InputMediaVideo,
+                    InputMediaAudio
+                )
+
+                media_group = []
+
+                for i, (media_type, file_id) in enumerate(media_list):
+
+                    if media_type == "photo":
+                        media = InputMediaPhoto(
+                            media=file_id,
+                            caption=caption if i == 0 else None
+                        )
+
+                    elif media_type == "video":
+                        media = InputMediaVideo(
+                            media=file_id,
+                            caption=caption if i == 0 else None
+                        )
+
+                    elif media_type == "audio":
+                        media = InputMediaAudio(
+                            media=file_id,
+                            caption=caption if i == 0 else None
+                        )
+
+                    media_group.append(media)
+
+                sent_messages = await bot.send_media_group(
+                    chat_id=ADMIN_ID,
+                    media=media_group
+                )
+
+                await bot.edit_message_reply_markup(
+                    chat_id=ADMIN_ID,
+                    message_id=sent_messages[0].message_id,
+                    reply_markup=moderation_kb(
+                        submission_id,
+                        has_text=bool(user_data.get("text")),
+                        has_media=True
+                    )
+                )
+
+            else:
+                # fallback — отправляем по одному
+                first = True
+                for media_type, file_id in media_list:
+
                     send_func = {
                         "photo": bot.send_photo,
                         "video": bot.send_video,
@@ -939,7 +997,10 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                         "voice": bot.send_voice,
                     }.get(media_type)
 
-                    if send_func:
+                    if not send_func:
+                        continue
+
+                    if first:
                         await send_func(
                             ADMIN_ID,
                             file_id,
@@ -950,17 +1011,8 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                                 has_media=True
                             )
                         )
-                    first = False
-                else:
-                    send_func = {
-                        "photo": bot.send_photo,
-                        "video": bot.send_video,
-                        "document": bot.send_document,
-                        "audio": bot.send_audio,
-                        "voice": bot.send_voice,
-                    }.get(media_type)
-
-                    if send_func:
+                        first = False
+                    else:
                         await send_func(ADMIN_ID, file_id)
 
         else:

@@ -1128,7 +1128,7 @@ async def get_text(message: Message, state: FSMContext):
             reply_markup=preview_kb()
         )
 
-        await state.set_state(Form.preview)
+        await go(Form.preview)
         return
 
     # если это первый ввод текста
@@ -1188,7 +1188,7 @@ async def back_to_preview(callback: CallbackQuery, state: FSMContext):
         reply_markup=preview_kb()
     )
 
-    await state.set_state(Form.preview)
+    await go(Form.preview)
     await callback.answer()
 
 # ---------- МЕДИА ----------
@@ -1446,9 +1446,7 @@ async def get_custom_nick(message: Message, state: FSMContext):
         reply_markup=preview_kb()
     )
 
-    current = await state.get_state()
-    await state.update_data(prev_state=current)
-    await state.set_state(Form.preview)
+    await go(Form.preview)
     
 async def create_pool():
     return await asyncpg.create_pool(DATABASE_URL)

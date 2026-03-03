@@ -784,6 +784,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
         await state.update_data(final_nick=None)
 
         await go(Form.nickname)
+        print("USER EDIT NICK TRIGGERED")
 
         await safe_edit(
             "Как подписать подгон?",

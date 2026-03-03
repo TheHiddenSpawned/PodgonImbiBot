@@ -178,7 +178,7 @@ def edit_kb(has_text: bool, has_media: bool):
 
     # Ник
     buttons.append(
-        [InlineKeyboardButton(text="👤 Изменить ник", callback_data="edit_nick_user")]
+        [InlineKeyboardButton(text="👤 Изменить ник", callback_data="user_edit_nick")]
     )
 
     # Навигация

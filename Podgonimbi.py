@@ -995,16 +995,16 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                 )
             )
 
-else:
-    await bot.send_message(
-        ADMIN_ID,
-        caption,
-        reply_markup=moderation_kb(
-            submission_id,
-            has_text=bool(user_data.get("text")),
-            has_media=False
-        )
-    )
+        else:
+            await bot.send_message(
+                ADMIN_ID,
+                caption,
+                reply_markup=moderation_kb(
+                    submission_id,
+                    has_text=bool(user_data.get("text")),
+                    has_media=False
+                )
+            )
         # --- ЧИСТИМ ПОЛЬЗОВАТЕЛЬСКИЙ СРАЧ ---
 
         try:

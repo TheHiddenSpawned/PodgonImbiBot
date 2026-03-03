@@ -834,14 +834,14 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
             return
 
-    # 🔥 ВОТ ЭТО ТЫ УДАЛИЛ — И НАДО ВЕРНУТЬ
-    await go(Form.nickname)
+        # 🔥 ВОТ ЭТО ТЫ УДАЛИЛ — И НАДО ВЕРНУТЬ
+        await go(Form.nickname)
 
-    await safe_edit(
-        "Как подписать подгон?",
-        nick_kb()
-    )
-    return
+        await safe_edit(
+            "Как подписать подгон?",
+            nick_kb()
+        )
+        return
         
         # ---------- DELETE MEDIA ----------
     if data == "delete_media":

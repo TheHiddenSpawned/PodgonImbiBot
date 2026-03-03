@@ -778,7 +778,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
     # ---------------- EDIT NICK USER ----------------
 
-    elif data == "edit_nick_user":
+    elif data == "user_edit_nick":
 
         # сбрасываем старый ник
         await state.update_data(final_nick=None)

@@ -1038,8 +1038,60 @@ async def get_text(message: Message, state: FSMContext):
         return   
 
     await state.update_data(text=message.text)
-    current = await state.get_state()
+
     user_data = await state.get_data()
+
+    # ЕСЛИ НИК УЖЕ ВЫБРАН — значит это редактирование перед публикацией
+    if user_data.get("final_nick"):
+
+        nickname = user_data.get("final_nick")
+
+        caption = f"🔥 Вот как будет выглядеть пост:\n\n👤 {nickname}"
+
+        if user_data.get("text"):
+            caption += f"\n\n📝 {user_data['text']}"
+
+        media_list = user_data.get("media", [])
+
+        if media_list:
+            first = True
+            for media_type, file_id in media_list:
+                if first:
+                    if media_type == "photo":
+                        await bot.send_photo(message.from_user.id, file_id, caption=caption)
+                    elif media_type == "video":
+                        await bot.send_video(message.from_user.id, file_id, caption=caption)
+                    elif media_type == "document":
+                        await bot.send_document(message.from_user.id, file_id, caption=caption)
+                    elif media_type == "audio":
+                        await bot.send_audio(message.from_user.id, file_id, caption=caption)
+                    elif media_type == "voice":
+                        await bot.send_voice(message.from_user.id, file_id, caption=caption)
+                    first = False
+                else:
+                    if media_type == "photo":
+                        await bot.send_photo(message.from_user.id, file_id)
+                    elif media_type == "video":
+                        await bot.send_video(message.from_user.id, file_id)
+                    elif media_type == "document":
+                        await bot.send_document(message.from_user.id, file_id)
+                    elif media_type == "audio":
+                        await bot.send_audio(message.from_user.id, file_id)
+                    elif media_type == "voice":
+                        await bot.send_voice(message.from_user.id, file_id)
+        else:
+            await message.answer(caption)
+
+        await message.answer(
+            "Публикуем?",
+            reply_markup=preview_kb()
+        )
+
+        await state.set_state(Form.preview)
+        return
+
+    # --- если это обычный первый ввод текста ---
+    current = await state.get_state()
     history = user_data.get("history", [])
 
     if current:

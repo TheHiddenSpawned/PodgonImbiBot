@@ -588,6 +588,7 @@ async def admin_delete_media_process(message: Message, state: FSMContext):
 @dp.callback_query(F.data)
 async def callbacks(callback: CallbackQuery, state: FSMContext):
     data = callback.data
+    print("CALLBACK DATA:", callback.data)
     await callback.answer()
 
     async def safe_edit(text, markup):

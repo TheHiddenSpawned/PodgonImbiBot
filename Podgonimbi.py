@@ -178,7 +178,7 @@ def edit_kb(has_text: bool, has_media: bool):
 
     # Ник
     buttons.append(
-        [InlineKeyboardButton(text="👤 Изменить ник", callback_data="to_nick")]
+        [InlineKeyboardButton(text="👤 Изменить ник", callback_data="edit_nick_user")]
     )
 
     # Навигация
@@ -776,6 +776,21 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
         )
         return
 
+    # ---------------- EDIT NICK USER ----------------
+
+    elif data == "edit_nick_user":
+
+        # сбрасываем старый ник
+        await state.update_data(final_nick=None)
+
+        await go(Form.nickname)
+
+        await safe_edit(
+            "Как подписать подгон?",
+            nick_kb()
+        )
+        return
+    
     # ---------------- TO NICK ----------------
     if data == "to_nick":
         user_data = await state.get_data()

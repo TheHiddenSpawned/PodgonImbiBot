@@ -792,7 +792,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
         return
     
     # ---------------- TO NICK ----------------
-    if data == "to_nick":
+    elif data == "to_nick":
         user_data = await state.get_data()
 
         # если ник уже выбран — сразу превью

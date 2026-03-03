@@ -928,45 +928,83 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
         await dp["db"].release(conn)
 
         if media_list:
-            first = True
+
+            from aiogram.types import InputMediaPhoto, InputMediaVideo
+
+            photos_videos = []
+            others = []
+
             for media_type, file_id in media_list:
+                if media_type in ["photo", "video"]:
+                    photos_videos.append((media_type, file_id))
+                else:
+                    others.append((media_type, file_id))
+
+            # 1️⃣ Отправляем альбом фото/видео
+            if photos_videos:
+                media_group = []
+
+                for i, (media_type, file_id) in enumerate(photos_videos):
+                    if media_type == "photo":
+                        media_group.append(
+                            InputMediaPhoto(
+                                media=file_id,
+                                caption=caption if i == 0 else None
+                            )
+                        )
+                    else:
+                        media_group.append(
+                            InputMediaVideo(
+                                media=file_id,
+                                caption=caption if i == 0 else None
+                            )
+                        )
+
+                await bot.send_media_group(
+                    chat_id=ADMIN_ID,
+                    media=media_group
+                )
+
+            else:
+                # если нет фото/видео — отправляем текст отдельно
+                await bot.send_message(
+                    ADMIN_ID,
+                    caption
+                )
+
+            # 2️⃣ Отправляем остальные файлы
+            for media_type, file_id in others:
 
                 send_func = {
-                    "photo": bot.send_photo,
-                    "video": bot.send_video,
                     "document": bot.send_document,
                     "audio": bot.send_audio,
                     "voice": bot.send_voice,
                 }.get(media_type)
 
-                if not send_func:
-                    continue
-
-                if first:
-                    await send_func(
-                        ADMIN_ID,
-                        file_id,
-                        caption=caption,
-                        reply_markup=moderation_kb(
-                            submission_id,
-                            has_text=bool(user_data.get("text")),
-                            has_media=True
-                        )
-                    )
-                    first = False
-                else:
+                if send_func:
                     await send_func(ADMIN_ID, file_id)
 
-        else:
+            # 3️⃣ Отдельное сообщение с кнопками модерации
             await bot.send_message(
                 ADMIN_ID,
-                caption,
+                "⬇️ Модерация",
                 reply_markup=moderation_kb(
                     submission_id,
                     has_text=bool(user_data.get("text")),
-                    has_media=False
+                    has_media=True
                 )
             )
+
+else:
+    await bot.send_message(
+        ADMIN_ID,
+        caption,
+        reply_markup=moderation_kb(
+            submission_id,
+            has_text=bool(user_data.get("text")),
+            has_media=False
+        )
+    )
         # --- ЧИСТИМ ПОЛЬЗОВАТЕЛЬСКИЙ СРАЧ ---
 
         try:

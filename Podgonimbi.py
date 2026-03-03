@@ -1039,56 +1039,16 @@ async def get_text(message: Message, state: FSMContext):
 
     await state.update_data(text=message.text)
 
-    user_data = await state.get_data()
+    # если это обычное добавление текста (до выбора ника)
+    current_state = await state.get_state()
 
-    # ЕСЛИ НИК УЖЕ ВЫБРАН — значит это редактирование перед публикацией
-    if user_data.get("final_nick"):
-
-        nickname = user_data.get("final_nick")
-
-        caption = f"🔥 Вот как будет выглядеть пост:\n\n👤 {nickname}"
-
-        if user_data.get("text"):
-            caption += f"\n\n📝 {user_data['text']}"
-
-        media_list = user_data.get("media", [])
-
-        if media_list:
-            first = True
-            for media_type, file_id in media_list:
-                if first:
-                    if media_type == "photo":
-                        await bot.send_photo(message.from_user.id, file_id, caption=caption)
-                    elif media_type == "video":
-                        await bot.send_video(message.from_user.id, file_id, caption=caption)
-                    elif media_type == "document":
-                        await bot.send_document(message.from_user.id, file_id, caption=caption)
-                    elif media_type == "audio":
-                        await bot.send_audio(message.from_user.id, file_id, caption=caption)
-                    elif media_type == "voice":
-                        await bot.send_voice(message.from_user.id, file_id, caption=caption)
-                    first = False
-                else:
-                    if media_type == "photo":
-                        await bot.send_photo(message.from_user.id, file_id)
-                    elif media_type == "video":
-                        await bot.send_video(message.from_user.id, file_id)
-                    elif media_type == "document":
-                        await bot.send_document(message.from_user.id, file_id)
-                    elif media_type == "audio":
-                        await bot.send_audio(message.from_user.id, file_id)
-                    elif media_type == "voice":
-                        await bot.send_voice(message.from_user.id, file_id)
-        else:
-            await message.answer(caption)
+    if current_state == Form.waiting_text.state:
+        await state.set_state(Form.text_menu)
 
         await message.answer(
-            "Публикуем?",
-            reply_markup=preview_kb()
+            "Текст сохранён ✅\nХочешь добавить медиа или перейти дальше?",
+            reply_markup=after_text_kb()
         )
-
-        await state.set_state(Form.preview)
-        return
 
     # --- если это обычный первый ввод текста ---
     current = await state.get_state()
@@ -1105,6 +1065,57 @@ async def get_text(message: Message, state: FSMContext):
         reply_markup=after_text_kb()
     )
 
+# ---------- ПОКАЗ ПРЕВЬЮ ---------
+
+@dp.callback_query(F.data == "back_to_preview")
+async def back_to_preview(callback: CallbackQuery, state: FSMContext):
+
+    user_data = await state.get_data()
+
+    nickname = user_data.get("final_nick")
+    caption = f"🔥 Вот как будет выглядеть пост:\n\n👤 {nickname}"
+
+    if user_data.get("text"):
+        caption += f"\n\n📝 {user_data['text']}"
+
+    media_list = user_data.get("media", [])
+
+    if media_list:
+        first = True
+        for media_type, file_id in media_list:
+            if first:
+                if media_type == "photo":
+                    await bot.send_photo(callback.from_user.id, file_id, caption=caption)
+                elif media_type == "video":
+                    await bot.send_video(callback.from_user.id, file_id, caption=caption)
+                elif media_type == "document":
+                    await bot.send_document(callback.from_user.id, file_id, caption=caption)
+                elif media_type == "audio":
+                    await bot.send_audio(callback.from_user.id, file_id, caption=caption)
+                elif media_type == "voice":
+                    await bot.send_voice(callback.from_user.id, file_id, caption=caption)
+                first = False
+            else:
+                if media_type == "photo":
+                    await bot.send_photo(callback.from_user.id, file_id)
+                elif media_type == "video":
+                    await bot.send_video(callback.from_user.id, file_id)
+                elif media_type == "document":
+                    await bot.send_document(callback.from_user.id, file_id)
+                elif media_type == "audio":
+                    await bot.send_audio(callback.from_user.id, file_id)
+                elif media_type == "voice":
+                    await bot.send_voice(callback.from_user.id, file_id)
+    else:
+        await callback.message.answer(caption)
+
+    await callback.message.answer(
+        "Публикуем?",
+        reply_markup=preview_kb()
+    )
+
+    await state.set_state(Form.preview)
+    await callback.answer()
 
 # ---------- МЕДИА ----------
 

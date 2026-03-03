@@ -929,40 +929,39 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
         if media_list:
 
-            media_types = {media_type for media_type, _ in media_list}
+            photos_videos = []
+            documents = []
+            voices = []
+            audios = []
 
-            # Проверяем можно ли делать media_group
-            can_group = (
-                len(media_types) == 1
-                and list(media_types)[0] in ["photo", "video", "audio"]
-            )
+            for media_type, file_id in media_list:
+                if media_type in ["photo", "video"]:
+                    photos_videos.append((media_type, file_id))
+                elif media_type == "document":
+                    documents.append(file_id)
+                elif media_type == "voice":
+                    voices.append(file_id)
+                elif media_type == "audio":
+                    audios.append(file_id)
 
-            if can_group and len(media_list) > 1:
+            first_message_id = None
 
-                from aiogram.types import (
-                    InputMediaPhoto,
-                    InputMediaVideo,
-                    InputMediaAudio
-                )
+            # === 1. Фото + Видео альбом ===
+            if photos_videos:
+
+                from aiogram.types import InputMediaPhoto, InputMediaVideo
 
                 media_group = []
 
-                for i, (media_type, file_id) in enumerate(media_list):
+                for i, (media_type, file_id) in enumerate(photos_videos):
 
                     if media_type == "photo":
                         media = InputMediaPhoto(
                             media=file_id,
                             caption=caption if i == 0 else None
                         )
-
-                    elif media_type == "video":
+                    else:
                         media = InputMediaVideo(
-                            media=file_id,
-                            caption=caption if i == 0 else None
-                        )
-
-                    elif media_type == "audio":
-                        media = InputMediaAudio(
                             media=file_id,
                             caption=caption if i == 0 else None
                         )
@@ -974,9 +973,41 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                     media=media_group
                 )
 
+                first_message_id = sent_messages[0].message_id
+
+            # === 2. Если нет фото/видео — первое любое ===
+            elif documents:
+                msg = await bot.send_document(
+                    ADMIN_ID,
+                    documents[0],
+                    caption=caption,
+                )
+                first_message_id = msg.message_id
+                documents = documents[1:]
+
+            elif audios:
+                msg = await bot.send_audio(
+                    ADMIN_ID,
+                    audios[0],
+                    caption=caption,
+                )
+                first_message_id = msg.message_id
+                audios = audios[1:]
+
+            elif voices:
+                msg = await bot.send_voice(
+                    ADMIN_ID,
+                    voices[0],
+                    caption=caption,
+                )
+                first_message_id = msg.message_id
+                voices = voices[1:]
+
+            # === 3. Кнопки модерации ===
+            if first_message_id:
                 await bot.edit_message_reply_markup(
                     chat_id=ADMIN_ID,
-                    message_id=sent_messages[0].message_id,
+                    message_id=first_message_id,
                     reply_markup=moderation_kb(
                         submission_id,
                         has_text=bool(user_data.get("text")),
@@ -984,36 +1015,17 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                     )
                 )
 
-            else:
-                # fallback — отправляем по одному
-                first = True
-                for media_type, file_id in media_list:
+            # === 4. Остальные документы ===
+            for file_id in documents:
+                await bot.send_document(ADMIN_ID, file_id)
 
-                    send_func = {
-                        "photo": bot.send_photo,
-                        "video": bot.send_video,
-                        "document": bot.send_document,
-                        "audio": bot.send_audio,
-                        "voice": bot.send_voice,
-                    }.get(media_type)
+            # === 5. Остальные аудио ===
+            for file_id in audios:
+                await bot.send_audio(ADMIN_ID, file_id)
 
-                    if not send_func:
-                        continue
-
-                    if first:
-                        await send_func(
-                            ADMIN_ID,
-                            file_id,
-                            caption=caption,
-                            reply_markup=moderation_kb(
-                                submission_id,
-                                has_text=bool(user_data.get("text")),
-                                has_media=True
-                            )
-                        )
-                        first = False
-                    else:
-                        await send_func(ADMIN_ID, file_id)
+            # === 6. Остальные voice ===
+            for file_id in voices:
+                await bot.send_voice(ADMIN_ID, file_id)
 
         else:
             await bot.send_message(

@@ -778,11 +778,17 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
     # ---------------- TO NICK ----------------
     if data == "to_nick":
+        await callback.answer()
         user_data = await state.get_data()
 
         # если ник уже выбран — просто preview
         if user_data.get("final_nick"):
             await state.set_state(Form.preview)
+
+            try:
+                await callback.message.delete()
+            except:
+                pass
 
             nickname = user_data.get("final_nick")
             caption = f"🔥 Вот как будет выглядеть пост:\n\n👤 {nickname}"

@@ -778,17 +778,11 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
     # ---------------- TO NICK ----------------
     if data == "to_nick":
-        await callback.answer()
         user_data = await state.get_data()
 
-        # если ник уже выбран — просто preview
+        # если ник уже выбран — сразу превью
         if user_data.get("final_nick"):
             await state.set_state(Form.preview)
-
-            try:
-                await callback.message.delete()
-            except:
-                pass
 
             nickname = user_data.get("final_nick")
             caption = f"🔥 Вот как будет выглядеть пост:\n\n👤 {nickname}"
@@ -797,6 +791,11 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                 caption += f"\n\n📝 {user_data['text']}"
 
             media_list = user_data.get("media", [])
+
+            try:
+                await callback.message.delete()
+            except:
+                pass
 
             if media_list:
                 first = True
@@ -807,7 +806,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                         elif media_type == "video":
                             await bot.send_video(callback.from_user.id, file_id, caption=caption)
                         elif media_type == "document":
-                           await bot.send_document(callback.from_user.id, file_id, caption=caption)
+                            await bot.send_document(callback.from_user.id, file_id, caption=caption)
                         elif media_type == "audio":
                             await bot.send_audio(callback.from_user.id, file_id, caption=caption)
                         elif media_type == "voice":
@@ -825,13 +824,24 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                         elif media_type == "voice":
                             await bot.send_voice(callback.from_user.id, file_id)
             else:
-                await callback.message.answer(caption)
+                await bot.send_message(callback.from_user.id, caption)
 
-            await callback.message.answer(
+            await bot.send_message(
+                callback.from_user.id,
                 "Публикуем?",
                 reply_markup=preview_kb()
             )
+
             return
+
+    # 🔥 ВОТ ЭТО ТЫ УДАЛИЛ — И НАДО ВЕРНУТЬ
+    await go(Form.nickname)
+
+    await safe_edit(
+        "Как подписать подгон?",
+        nick_kb()
+    )
+    return
         
         # ---------- DELETE MEDIA ----------
     if data == "delete_media":

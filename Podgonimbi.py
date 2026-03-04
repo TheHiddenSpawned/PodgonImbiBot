@@ -780,18 +780,8 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
     # ---------------- EDIT NICK USER ----------------
 
     elif data == "user_edit_nick":
-
-        # сбрасываем старый ник
-        await state.update_data(final_nick=None)
-
-        await go(Form.nickname)
-        print("USER EDIT NICK TRIGGERED")
-
-        await safe_edit(
-            "Как подписать подгон?",
-            nick_kb()
-        )
-        return
+    await state.update_data(final_nick=None)
+    data = "custom_nick"
     
     # ---------------- TO NICK ----------------
     elif data == "to_nick":

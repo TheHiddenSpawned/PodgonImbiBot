@@ -1067,6 +1067,8 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
         data = await state.get_data()
         user_msgs = data.get("user_messages", [])
 
+        print("MESSAGES TO DELETE:", user_msgs)
+
         for msg_id in user_msgs:
             try:
                 await bot.delete_message(callback.from_user.id, msg_id)

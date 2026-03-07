@@ -590,21 +590,16 @@ async def admin_delete_media_process(message: Message, state: FSMContext):
 
 # ---------- CALLBACK ОБРАБОТЧИК ----------
 
-@dp.callback_query()
-async def safe_edit(text, markup):
+async def safe_edit(text, markup=None):
     try:
         await callback.message.edit_text(text, reply_markup=markup)
 
     except TelegramBadRequest as e:
 
-        # если текст такой же — просто ничего не делаем
         if "message is not modified" in str(e):
             return
 
-        # если редактировать нельзя — отправляем новое сообщение
         msg = await callback.message.answer(text, reply_markup=markup)
-
-        # сохраняем его для удаления
         await track_message(state, msg)
 
     async def go(new_state):

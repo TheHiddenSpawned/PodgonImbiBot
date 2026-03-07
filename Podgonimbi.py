@@ -1064,8 +1064,8 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             pass
 
         # удаляем 10 последних сообщений бота (которые могли быть предпросмотром)
-        data = await state.get_data()
-        user_msgs = data.get("user_messages", [])
+        state_data = await state.get_data()
+        user_msgs = state_data.get("user_messages", [])
 
         print("MESSAGES TO DELETE:", user_msgs)
 
@@ -1287,6 +1287,11 @@ async def get_media(message: Message, state: FSMContext):
 @dp.message(Form.delete_media)
 async def process_delete_media(message: Message, state: FSMContext):
 
+    data = await state.get_data()
+    user_msgs = data.get("user_messages", [])
+    user_msgs.append(message.message_id)
+    await state.update_data(user_messages=user_msgs)
+    
     if not message.text.isdigit():
         await message.answer("Нужно отправить цифру 👀")
         return
@@ -1419,6 +1424,11 @@ async def admin_edit_nickname_save(message: Message, state: FSMContext):
 # ---------- Ник ----------
 @dp.message(Form.custom_nickname)
 async def get_custom_nick(message: Message, state: FSMContext):
+
+    data = await state.get_data()
+    user_msgs = data.get("user_messages", [])
+    user_msgs.append(message.message_id)
+    await state.update_data(user_messages=user_msgs)
 
     if message.content_type != ContentType.TEXT:
         await message.answer("Нужен текстовый ник ✍️")

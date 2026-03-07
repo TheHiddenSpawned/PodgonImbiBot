@@ -1058,25 +1058,20 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                     has_media=False
                 )
             )
-        # --- ЧИСТИМ ПОЛЬЗОВАТЕЛЬСКИЙ СРАЧ ---
+        # --- ЧИСТИМ ЧАТ ---
 
-        try:
-            # удаляем сообщение с кнопкой "Публикуем?"
-            await callback.message.delete()
-        except:
-            pass
-
-        # удаляем 10 последних сообщений бота (которые могли быть предпросмотром)
         state_data = await state.get_data()
-        user_msgs = state_data.get("user_messages", [])
+        msgs = state_data.get("messages_to_delete", [])
 
-        print("MESSAGES TO DELETE:", user_msgs)
+        # добавим текущее сообщение с кнопкой
+        msgs.append(callback.message.message_id)
 
-        for msg_id in user_msgs:
+        for msg_id in msgs:
             try:
                 await bot.delete_message(callback.from_user.id, msg_id)
             except:
                 pass
+
         await state.clear()
 
         await callback.message.answer(

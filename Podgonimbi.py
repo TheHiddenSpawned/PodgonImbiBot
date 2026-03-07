@@ -21,8 +21,6 @@ from aiogram import F
 from aiogram.exceptions import TelegramBadRequest
 from threading import Thread
 from http.server import SimpleHTTPRequestHandler, HTTPServer
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))

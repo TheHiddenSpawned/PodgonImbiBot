@@ -935,7 +935,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                     elif media_type == "video":
                         msg = await bot.send_video(callback.from_user.id, file_id, caption=caption)
 
-                   elif media_type == "document":
+                    elif media_type == "document":
                         msg = await bot.send_document(callback.from_user.id, file_id, caption=caption)
 
                     elif media_type == "audio":

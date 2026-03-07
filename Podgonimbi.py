@@ -204,7 +204,7 @@ async def track_message(state: FSMContext, msg: Message):
 async def start(message: Message, state: FSMContext):
     await track_message(state, message)
     await state.clear()
-    msg = await message.answer
+    msg = await message.answer(
         "Кидай имбу 🔥\n\n"
         "Можно отправить:\n\n"
         "✍️ Текст — описание фишки, мысль, новость, в общем всё, что считаешь имбой\n\n"

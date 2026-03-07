@@ -192,7 +192,10 @@ def edit_kb(has_text: bool, has_media: bool):
 async def track_message(state: FSMContext, msg: Message):
     data = await state.get_data()
     msgs = data.get("messages_to_delete", [])
-    msgs.append(msg.message_id)
+
+    if msg.message_id not in msgs:
+        msgs.append(msg.message_id)
+
     await state.update_data(messages_to_delete=msgs)
 
 # ---------- СТАРТ ----------
@@ -201,7 +204,7 @@ async def track_message(state: FSMContext, msg: Message):
 async def start(message: Message, state: FSMContext):
     await track_message(state, message)
     await state.clear()
-    await message.answer(
+    msg = await message.answer
         "Кидай имбу 🔥\n\n"
         "Можно отправить:\n\n"
         "✍️ Текст — описание фишки, мысль, новость, в общем всё, что считаешь имбой\n\n"
@@ -209,6 +212,7 @@ async def start(message: Message, state: FSMContext):
         "Можно отправить и текст, и медиа или что-то одно.",
         reply_markup=start_kb()
     )
+    await track_message(state, msg)
     await state.set_state(Form.choosing_type)
 
 
@@ -600,7 +604,11 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
         try:
             await callback.message.edit_text(text, reply_markup=markup)
             await track_message(state, callback.message)
-        except TelegramBadRequest:
+        except TelegramBadRequest as e:
+
+            if "message is not modified" in str(e):
+                return
+
             msg = await callback.message.answer(text, reply_markup=markup)
             await track_message(state, msg)
 
@@ -1093,7 +1101,8 @@ async def get_text(message: Message, state: FSMContext):
     await state.update_data(text=message.text)
     
     if message.content_type != ContentType.TEXT:
-        await message.answer("Сейчас нужен текст ✍️")
+        msg = await message.answer("Сейчас нужен текст ✍️")
+        await track_message(state, msg)
         return   
         
     # СОХРАНЯЕМ ID СООБЩЕНИЯ ПОЛЬЗОВАТЕЛЯ        
@@ -1228,7 +1237,8 @@ async def get_media(message: Message, state: FSMContext):
         ContentType.AUDIO,
         ContentType.VOICE
     ]:
-        await message.answer("Сейчас нужно медиа 📎")
+        msg = await message.answer("Сейчас нужно медиа 📎")
+        await track_message(state, msg)
         return
 
     # СОХРАНЯЕМ ID СООБЩЕНИЯ    
@@ -1301,7 +1311,8 @@ async def process_delete_media(message: Message, state: FSMContext):
     await state.update_data(user_messages=user_msgs)
     
     if not message.text.isdigit():
-        await message.answer("Нужно отправить цифру 👀")
+        msg = await message.answer("Нужно отправить цифру 👀")
+        await track_message(state, msg)
         return
 
     index = int(message.text) - 1
@@ -1441,7 +1452,8 @@ async def get_custom_nick(message: Message, state: FSMContext):
     await state.update_data(user_messages=user_msgs)
 
     if message.content_type != ContentType.TEXT:
-        await message.answer("Нужен текстовый ник ✍️")
+        msg = await message.answer("Нужен текстовый ник ✍️")
+        await track_message(state, msg)
         return
 
     await state.update_data(custom_nick=message.text)

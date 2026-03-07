@@ -599,10 +599,10 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
     async def safe_edit(text, markup=None):
         try:
             await callback.message.edit_text(text, reply_markup=markup)
-        except TelegramBadRequest as e:
-            if "message is not modified" not in str(e):
-                msg = await callback.message.answer(text, reply_markup=markup)
-                await track_message(state, msg)
+            await track_message(state, callback.message)
+        except TelegramBadRequest:
+            msg = await callback.message.answer(text, reply_markup=markup)
+            await track_message(state, msg)
 
     async def go(new_state):
         current = await state.get_state()

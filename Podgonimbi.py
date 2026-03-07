@@ -1086,13 +1086,14 @@ async def get_text(message: Message, state: FSMContext):
     if message.content_type != ContentType.TEXT:
         await message.answer("Сейчас нужен текст ✍️")
         return   
-
-    await state.update_data(text=message.text)
-
+        
+    # СОХРАНЯЕМ ID СООБЩЕНИЯ ПОЛЬЗОВАТЕЛЯ        
     data = await state.get_data()
     user_msgs = data.get("user_messages", [])
     user_msgs.append(message.message_id)
     await state.update_data(user_messages=user_msgs)
+    
+    await state.update_data(text=message.text)
 
     user_data = await state.get_data()
 
@@ -1219,6 +1220,7 @@ async def get_media(message: Message, state: FSMContext):
         await message.answer("Сейчас нужно медиа 📎")
         return
 
+    # СОХРАНЯЕМ ID СООБЩЕНИЯ    
     data = await state.get_data()
     user_msgs = data.get("user_messages", [])
     user_msgs.append(message.message_id)

@@ -589,8 +589,9 @@ async def admin_delete_media_process(message: Message, state: FSMContext):
     await state.clear()
 
 # ---------- CALLBACK ОБРАБОТЧИК ----------
+
 @dp.callback_query()
-async def safe_edit(text, markup=None):
+async def safe_edit(callback, state, text, markup=None):
     try:
         await callback.message.edit_text(text, reply_markup=markup)
 

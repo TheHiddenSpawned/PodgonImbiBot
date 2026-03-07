@@ -189,6 +189,12 @@ def edit_kb(has_text: bool, has_media: bool):
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)    
 
+async def track_message(state: FSMContext, msg: Message):
+    data = await state.get_data()
+    msgs = data.get("messages_to_delete", [])
+    msgs.append(msg.message_id)
+    await state.update_data(messages_to_delete=msgs)
+
 # ---------- СТАРТ ----------
 
 @dp.message(CommandStart())
@@ -1088,6 +1094,10 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 @dp.message(Form.waiting_text)
 async def get_text(message: Message, state: FSMContext):
 
+    await track_message(state, message)
+
+    await state.update_data(text=message.text)
+    
     if message.content_type != ContentType.TEXT:
         await message.answer("Сейчас нужен текст ✍️")
         return   
@@ -1215,6 +1225,8 @@ async def back_to_preview(callback: CallbackQuery, state: FSMContext):
 @dp.message(Form.waiting_media)
 async def get_media(message: Message, state: FSMContext):
 
+    await track_message(state, message)
+
     if message.content_type not in [
         ContentType.PHOTO,
         ContentType.VIDEO,
@@ -1286,6 +1298,8 @@ async def get_media(message: Message, state: FSMContext):
     
 @dp.message(Form.delete_media)
 async def process_delete_media(message: Message, state: FSMContext):
+
+    await track_message(state, message)
 
     data = await state.get_data()
     user_msgs = data.get("user_messages", [])
@@ -1424,6 +1438,8 @@ async def admin_edit_nickname_save(message: Message, state: FSMContext):
 # ---------- Ник ----------
 @dp.message(Form.custom_nickname)
 async def get_custom_nick(message: Message, state: FSMContext):
+
+    await track_message(state, message)
 
     data = await state.get_data()
     user_msgs = data.get("user_messages", [])

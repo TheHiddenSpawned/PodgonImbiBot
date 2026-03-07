@@ -189,12 +189,6 @@ def edit_kb(has_text: bool, has_media: bool):
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)    
 
-async def safe_edit(callback, text, markup=None):
-    try:
-        await callback.message.edit_text(text, reply_markup=markup)
-    except Exception:
-        await callback.message.answer(text, reply_markup=markup)
-
 async def track_message(state: FSMContext, msg: Message):
     data = await state.get_data()
     msgs = data.get("messages_to_delete", [])

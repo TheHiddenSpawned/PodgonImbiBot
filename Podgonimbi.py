@@ -589,7 +589,7 @@ async def admin_delete_media_process(message: Message, state: FSMContext):
 
 # ---------- CALLBACK ОБРАБОТЧИК ----------
 
-@dp.callback_query(F.data)
+@dp.callback_query()
 async def callbacks(callback: CallbackQuery, state: FSMContext):
     data = callback.data
     print("CALLBACK DATA:", callback.data)
@@ -732,8 +732,6 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
     if data in ["send_text", "add_text"]:
         await go(Form.waiting_text)
 
-        await state.update_data(user_messages=[])
-
         await safe_edit(
             "Отправь текст ✍️",
             InlineKeyboardMarkup(inline_keyboard=[
@@ -759,7 +757,6 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
     # ---------------- MEDIA ----------------
     if data == "send_media":
         await state.update_data(media=[])
-        await state.update_data(user_messages=[])
         await go(Form.waiting_media)
 
         await safe_edit(

@@ -1571,10 +1571,10 @@ async def catch_all(message: Message, state: FSMContext):
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)
 
-    # 🔹 Сначала создаём пул
-    dp["db"] = await create_pool()
+    # 🔹 создаём пул БД
+    dp["db"] = await asyncpg.create_pool(DATABASE_URL)
 
-    # 🔹 Создаём таблицы
+    # 🔹 создаём таблицы
     async with dp["db"].acquire() as conn:
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -1596,7 +1596,6 @@ async def main():
             );
         """)
 
-    # 🔹 И ТОЛЬКО ПОТОМ запускаем polling
     await dp.start_polling(bot)
 
 def run_http():

@@ -202,8 +202,8 @@ async def track_message(state: FSMContext, msg: Message):
 
 @dp.message(CommandStart())
 async def start(message: Message, state: FSMContext):
-    await track_message(state, message)
     await state.clear()
+    await track_message(state, message)
     msg = await message.answer(
         "Кидай имбу 🔥\n\n"
         "Можно отправить:\n\n"
@@ -1288,17 +1288,20 @@ async def get_media(message: Message, state: FSMContext):
     current_count = len(media_list)
 
     if current_count < 10:
-        await message.answer(
+        msg = await message.answer(
             f"Медиа добавлено ({current_count}/10) ✅\n"
             "Можешь отправить ещё или перейти дальше.",
             reply_markup=after_media_kb()
         )
+        await track_message(state, msg)
+
     else:
-        await message.answer(
+        msg = await message.answer(
             "✅ Добавлено 10/10 медиа.\n\n"
             "Лимит достигнут. Теперь можешь перейти дальше.",
             reply_markup=after_media_kb()
         )
+        await track_message(state, msg)
     
 @dp.message(Form.delete_media)
 async def process_delete_media(message: Message, state: FSMContext):

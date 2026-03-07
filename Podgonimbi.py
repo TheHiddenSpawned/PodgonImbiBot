@@ -199,6 +199,7 @@ async def track_message(state: FSMContext, msg: Message):
 
 @dp.message(CommandStart())
 async def start(message: Message, state: FSMContext):
+    await track_message(state, message)
     await state.clear()
     await message.answer(
         "Кидай имбу 🔥\n\n"
@@ -590,17 +591,21 @@ async def admin_delete_media_process(message: Message, state: FSMContext):
 # ---------- CALLBACK ОБРАБОТЧИК ----------
 
 @dp.callback_query()
-async def callbacks(callback: CallbackQuery, state: FSMContext):
-    data = callback.data
-    print("CALLBACK DATA:", callback.data)
-    await callback.answer()
+async def safe_edit(text, markup):
+    try:
+        await callback.message.edit_text(text, reply_markup=markup)
 
-    async def safe_edit(text, markup):
-        try:
-            await callback.message.edit_text(text, reply_markup=markup)
-        except TelegramBadRequest as e:
-            if "message is not modified" not in str(e):
-                raise
+    except TelegramBadRequest as e:
+
+        # если текст такой же — просто ничего не делаем
+        if "message is not modified" in str(e):
+            return
+
+        # если редактировать нельзя — отправляем новое сообщение
+        msg = await callback.message.answer(text, reply_markup=markup)
+
+        # сохраняем его для удаления
+        await track_message(state, msg)
 
     async def go(new_state):
         current = await state.get_state()
@@ -1493,6 +1498,13 @@ async def get_custom_nick(message: Message, state: FSMContext):
     
 async def create_pool():
     return await asyncpg.create_pool(DATABASE_URL)
+
+
+# ---------- УДАЛЕНИЕ ОШИБОЧНЫХ СООБЩЕНИЙ ----------
+
+@dp.message()
+async def catch_all(message: Message, state: FSMContext):
+    await track_message(state, message)
 
 
 # ---------- ЗАПУСК ----------

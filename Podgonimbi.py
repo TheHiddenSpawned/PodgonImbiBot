@@ -1061,9 +1061,12 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             pass
 
         # удаляем 10 последних сообщений бота (которые могли быть предпросмотром)
-        for i in range(1, 15):
+        data = await state.get_data()
+        user_msgs = data.get("user_messages", [])
+
+        for msg_id in user_msgs:
             try:
-                await bot.delete_message(callback.from_user.id, callback.message.message_id - i)
+                await bot.delete_message(callback.from_user.id, msg_id)
             except:
                 pass
         await state.clear()
@@ -1085,6 +1088,11 @@ async def get_text(message: Message, state: FSMContext):
         return   
 
     await state.update_data(text=message.text)
+
+    data = await state.get_data()
+    user_msgs = data.get("user_messages", [])
+    user_msgs.append(message.message_id)
+    await state.update_data(user_messages=user_msgs)
 
     user_data = await state.get_data()
 
@@ -1211,6 +1219,11 @@ async def get_media(message: Message, state: FSMContext):
         await message.answer("Сейчас нужно медиа 📎")
         return
 
+    data = await state.get_data()
+    user_msgs = data.get("user_messages", [])
+    user_msgs.append(message.message_id)
+    await state.update_data(user_messages=user_msgs)
+    
     data = await state.get_data()
     media_list = data.get("media", [])
 

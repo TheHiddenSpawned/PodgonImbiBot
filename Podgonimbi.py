@@ -189,6 +189,12 @@ def edit_kb(has_text: bool, has_media: bool):
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)    
 
+async def safe_edit(callback, text, markup=None):
+    try:
+        await callback.message.edit_text(text, reply_markup=markup)
+    except Exception:
+        await callback.message.answer(text, reply_markup=markup)
+
 async def track_message(state: FSMContext, msg: Message):
     data = await state.get_data()
     msgs = data.get("messages_to_delete", [])
@@ -590,18 +596,19 @@ async def admin_delete_media_process(message: Message, state: FSMContext):
 
 # ---------- CALLBACK ОБРАБОТЧИК ----------
 
-@dp.callback_query()
-async def safe_edit(callback, state, text, markup=None):
-    try:
-        await callback.message.edit_text(text, reply_markup=markup)
+@dp.callback_query(F.data)
+async def callbacks(callback: CallbackQuery, state: FSMContext):
 
-    except TelegramBadRequest as e:
+    data = callback.data
+    await callback.answer()
 
-        if "message is not modified" in str(e):
-            return
-
-        msg = await callback.message.answer(text, reply_markup=markup)
-        await track_message(state, msg)
+    async def safe_edit(text, markup=None):
+        try:
+            await callback.message.edit_text(text, reply_markup=markup)
+        except TelegramBadRequest as e:
+            if "message is not modified" not in str(e):
+                msg = await callback.message.answer(text, reply_markup=markup)
+                await track_message(state, msg)
 
     async def go(new_state):
         current = await state.get_state()

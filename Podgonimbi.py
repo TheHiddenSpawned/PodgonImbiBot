@@ -806,63 +806,78 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             await state.set_state(Form.preview)
 
             nickname = user_data.get("final_nick")
-            caption = f"🔥 Вот как будет выглядеть пост:\n\n👤 {nickname}"
+            caption = f"👤 {nickname}"
 
             if user_data.get("text"):
                 caption += f"\n\n📝 {user_data['text']}"
 
             media_list = user_data.get("media", [])
 
-            try:
-                await callback.message.delete()
-            except:
-                pass
-
             if media_list:
                 first = True
                 for media_type, file_id in media_list:
-                    if first:
-                        if media_type == "photo":
-                            await bot.send_photo(callback.from_user.id, file_id, caption=caption)
-                        elif media_type == "video":
-                            await bot.send_video(callback.from_user.id, file_id, caption=caption)
-                        elif media_type == "document":
-                            await bot.send_document(callback.from_user.id, file_id, caption=caption)
-                        elif media_type == "audio":
-                            await bot.send_audio(callback.from_user.id, file_id, caption=caption)
-                        elif media_type == "voice":
-                            await bot.send_voice(callback.from_user.id, file_id, caption=caption)
-                        first = False
-                    else:
-                        if media_type == "photo":
-                            await bot.send_photo(callback.from_user.id, file_id)
-                        elif media_type == "video":
-                            await bot.send_video(callback.from_user.id, file_id)
-                        elif media_type == "document":
-                            await bot.send_document(callback.from_user.id, file_id)
-                        elif media_type == "audio":
-                            await bot.send_audio(callback.from_user.id, file_id)
-                        elif media_type == "voice":
-                            await bot.send_voice(callback.from_user.id, file_id)
-            else:
-                await bot.send_message(callback.from_user.id, caption)
 
-            await bot.send_message(
+                    if first:
+
+                        if media_type == "photo":
+                            msg = await bot.send_photo(callback.from_user.id, file_id, caption=caption)
+
+                        elif media_type == "video":
+                            msg = await bot.send_video(callback.from_user.id, file_id, caption=caption)
+
+                        elif media_type == "document":
+                            msg = await bot.send_document(callback.from_user.id, file_id, caption=caption)
+
+                        elif media_type == "audio":
+                            msg = await bot.send_audio(callback.from_user.id, file_id, caption=caption)
+
+                        elif media_type == "voice":
+                            msg = await bot.send_voice(callback.from_user.id, file_id, caption=caption)
+
+                        await track_message(state, msg)
+                        first = False
+
+                    else:
+
+                        if media_type == "photo":
+                            msg = await bot.send_photo(callback.from_user.id, file_id)
+
+                        elif media_type == "video":
+                            msg = await bot.send_video(callback.from_user.id, file_id)
+
+                        elif media_type == "document":
+                            msg = await bot.send_document(callback.from_user.id, file_id)
+
+                        elif media_type == "audio":
+                            msg = await bot.send_audio(callback.from_user.id, file_id)
+
+                        elif media_type == "voice":
+                            msg = await bot.send_voice(callback.from_user.id, file_id)
+
+                        await track_message(state, msg)
+
+            else:
+                msg = await bot.send_message(callback.from_user.id, caption)
+                await track_message(state, msg)
+
+            msg = await bot.send_message(
                 callback.from_user.id,
                 "Публикуем?",
                 reply_markup=preview_kb()
             )
+            await track_message(state, msg)
 
+            await callback.answer()
             return
 
-        # 🔥 ВОТ ЭТО ТЫ УДАЛИЛ — И НАДО ВЕРНУТЬ
-        await go(Form.nickname)
+        await state.set_state(Form.waiting_nick)
 
-        await safe_edit(
-            "Как подписать подгон?",
-            nick_kb()
+        msg = await callback.message.answer(
+            "Теперь отправь ник 👤"
         )
-        return
+        await track_message(state, msg)
+
+        await callback.answer()
         
         # ---------- DELETE MEDIA ----------
     if data == "delete_media":

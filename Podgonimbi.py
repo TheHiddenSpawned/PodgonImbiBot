@@ -894,11 +894,11 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
         await state.set_state(Form.delete_media)
 
-        await callback.message.answer(
-            f"🗑 Какое по счёту медиа удалить? (1–{len(media_list)})\n"
+        msg = await message.answer(
+            "🗑 Какое по счёту медиа удалить? (1–3)\n"
             "Просто напиши цифру."
         )
-        return
+        await track_message(state, msg)
 
     # ---------------- CUSTOM NICK ----------------
     if data == "custom_nick":

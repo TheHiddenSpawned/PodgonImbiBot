@@ -856,7 +856,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                         elif media_type == "audio":
                             msg = await bot.send_audio(callback.from_user.id, file_id)
 
-                       elif media_type == "voice":
+                        elif media_type == "voice":
                             msg = await bot.send_voice(callback.from_user.id, file_id)
 
                         await track_message(state, msg)

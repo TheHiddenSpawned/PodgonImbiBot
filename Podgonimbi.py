@@ -806,12 +806,17 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             await state.set_state(Form.preview)
 
             nickname = user_data.get("final_nick")
-            caption = f"👤 {nickname}"
+            caption = f"🔥 Вот как будет выглядеть пост:\n\n👤 {nickname}"
 
             if user_data.get("text"):
                 caption += f"\n\n📝 {user_data['text']}"
 
             media_list = user_data.get("media", [])
+
+            try:
+                await callback.message.delete()
+            except:
+                pass
 
             if media_list:
                 first = True
@@ -851,7 +856,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                         elif media_type == "audio":
                             msg = await bot.send_audio(callback.from_user.id, file_id)
 
-                        elif media_type == "voice":
+                       elif media_type == "voice":
                             msg = await bot.send_voice(callback.from_user.id, file_id)
 
                         await track_message(state, msg)
@@ -867,17 +872,15 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             )
             await track_message(state, msg)
 
-            await callback.answer()
             return
 
-        await state.set_state(Form.nickname)
-
-        msg = await callback.message.answer(
-            "Теперь отправь ник 👤"
+        # 🔥 ТВОЙ ОРИГИНАЛЬНЫЙ КУСОК — НИЧЕГО НЕ МЕНЯЕМ
+        await go(Form.nickname)
+        await safe_edit(
+            "Как подписать подгон?",
+            nick_kb()
         )
-        await track_message(state, msg)
-
-        await callback.answer()
+        return
         
         # ---------- DELETE MEDIA ----------
     if data == "delete_media":

@@ -870,7 +870,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             await callback.answer()
             return
 
-        await state.set_state(Form.waiting_nick)
+        await state.set_state(Form.nickname)
 
         msg = await callback.message.answer(
             "Теперь отправь ник 👤"

@@ -1690,7 +1690,7 @@ async def show_next(message):
     if submission["text"]:
         caption += f"{submission['text']}\n\n"
 
-caption += f"👤 Подгон от: {submission['nickname']}"
+        caption += f"👤 Подгон от: {submission['nickname']}"
 
     media_list = json.loads(submission["media"]) if submission["media"] else []
 

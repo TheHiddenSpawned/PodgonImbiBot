@@ -738,7 +738,7 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                 history.append(current)
 
         await state.update_data(history=history)
-        await state.set_state(new_state))
+        await state.set_state(new_state)
 
     # ---------------- HOME ----------------
     if data == "home":

@@ -21,6 +21,7 @@ from aiogram import F
 from aiogram.exceptions import TelegramBadRequest
 from threading import Thread
 from http.server import SimpleHTTPRequestHandler, HTTPServer
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
@@ -149,6 +150,11 @@ def moderation_kb(submission_id, has_text: bool, has_media: bool):
 def after_submit_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🚀 Прислать ещё подгон", callback_data="home")],
+    ])
+
+def queue_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🧑‍⚖️ Открыть очередь", callback_data="open_queue")]
     ])
 
 def edit_kb(has_text: bool, has_media: bool):
@@ -282,6 +288,8 @@ async def approve_handler(callback: CallbackQuery):
 
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.answer("Опубликовано ✅")
+    
+    await show_next(callback.message)
 
 # ---------- Отклоить ----------
 
@@ -305,6 +313,8 @@ async def reject_handler(callback: CallbackQuery):
 
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.answer("Отклонено ❌")
+    
+    await show_next(callback.message)
 
 # ---------- Редактировать текст ----------
 
@@ -1617,6 +1627,43 @@ async def main():
         """)
 
     await dp.start_polling(bot)
+
+async def show_next(message):
+
+    conn = await dp["db"].acquire()
+
+    submission = await conn.fetchrow("""
+        SELECT * FROM submissions
+        WHERE status = 'pending'
+        ORDER BY created_at
+        LIMIT 1
+    """)
+
+    await dp["db"].release(conn)
+
+    if not submission:
+        await message.answer("🎉 Очередь закончилась")
+        return
+
+    caption = f"🔥 Новый подгон\n\n👤 {submission['nickname']}"
+
+    if submission["text"]:
+        caption += f"\n\n📝 {submission['text']}"
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="✅ Опубликовать",
+                callback_data=f"approve_{submission['id']}"
+            ),
+            InlineKeyboardButton(
+                text="❌ Отклонить",
+                callback_data=f"reject_{submission['id']}"
+            )
+        ]
+    ])
+
+    await message.answer(caption, reply_markup=kb)
 
 def run_http():
     port = int(os.environ.get("PORT", 10000))

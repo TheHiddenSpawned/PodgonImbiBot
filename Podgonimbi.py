@@ -23,6 +23,7 @@ from aiogram.exceptions import TelegramBadRequest
 from threading import Thread
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram import BaseMiddleware
 
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
@@ -225,6 +226,77 @@ async def track_message(state: FSMContext, msg: Message):
         msgs.append(msg.message_id)
 
     await state.update_data(messages_to_delete=msgs)
+
+class AntiSpamMiddleware(BaseMiddleware):
+
+    async def __call__(self, handler, event, data):
+
+        user = None
+
+        if hasattr(event, "from_user"):
+            user = event.from_user
+
+        if not user:
+            return await handler(event, data)
+
+        user_id = user.id
+        now = time.time()
+
+        # 🚫 проверка бана
+        if user_id in banned_users:
+
+            if now < banned_users[user_id]:
+
+                if isinstance(event, Message):
+
+                    remaining = int((banned_users[user_id] - now) / 60)
+
+                    try:
+                        await event.answer(
+                            f"🚫 Ты временно заблокирован за спам.\n\n"
+                            f"Попробуй снова через {remaining} мин."
+                        )
+                    except:
+                        pass
+
+                return
+
+            else:
+                del banned_users[user_id]
+
+        # ⏱ cooldown
+        last = last_text_time.get(user_id, 0)
+        delta = now - last
+
+        if delta < TEXT_COOLDOWN:
+
+            spam_hits[user_id] = spam_hits.get(user_id, 0) + 1
+
+            if spam_hits[user_id] > 3:
+
+                spam_warns[user_id] = spam_warns.get(user_id, 0) + 1
+
+                if spam_warns[user_id] >= MAX_WARNS:
+
+                    banned_users[user_id] = now + BAN_TIME
+                    spam_warns[user_id] = 0
+                    spam_hits[user_id] = 0
+
+                    if isinstance(event, Message):
+
+                        await event.answer(
+                            "🚫 Ты отправляешь сообщения слишком быстро.\n\n"
+                            "Бот временно заблокировал тебя на 1 час."
+                        )
+
+                    return
+
+            return
+
+        last_text_time[user_id] = now
+        spam_hits[user_id] = 0
+
+        return await handler(event, data)
 
 # ---------- СТАРТ ----------
 
@@ -1275,76 +1347,6 @@ async def get_text(message: Message, state: FSMContext):
 
     await track_message(state, message)
 
-    user_id = message.from_user.id
-    now = time.time()
-    delta = now - last_text_time.get(user_id, 0)
-
-    # если это куски одного длинного сообщения — игнорируем
-    if delta < 0.5:
-        last_text_time[user_id] = now
-        return
-
-    # если реально спамит
-    if delta < 2:
-        last_text_time[user_id] = now
-        return
-
-    # 🚫 ПРОВЕРКА БАНА
-    if user_id in banned_users and now < banned_users[user_id]:
-
-        if message.text and message.text.startswith("/unban"):
-            pass
-        else:
-
-            if user_id in last_text_time and now - last_text_time[user_id] < 5:
-                return
-
-            remaining = int((banned_users[user_id] - now) / 60)
-
-            msg = await message.answer(
-                f"🚫 Ты временно заблокирован за спам.\n\n"
-                f"Попробуй снова через {remaining} мин."
-            )
-            await track_message(state, msg)
-            return
-
-
-    # ⚡ АНТИСПАМ
-    if user_id in last_text_time and now - last_text_time[user_id] < TEXT_COOLDOWN:
-
-        spam_hits[user_id] = spam_hits.get(user_id, 0) + 1
-
-        # первые 2 быстрых сообщения игнорируем (телега режет длинный текст)
-        if spam_hits[user_id] <= 2:
-            return
-
-        spam_warns[user_id] = spam_warns.get(user_id, 0) + 1
-
-        if spam_warns[user_id] >= MAX_WARNS:
-
-            banned_users[user_id] = now + BAN_TIME
-            spam_warns[user_id] = 0
-            spam_hits[user_id] = 0
-
-            msg = await message.answer(
-                "🚫 Ты отправляешь сообщения слишком быстро.\n\n"
-                "Бот временно заблокировал тебя на 1 час."
-            )
-            await track_message(state, msg)
-            return
-
-        msg = await message.answer(
-            f"⚠️ Не отправляй сообщения слишком быстро.\n\n"
-            f"Предупреждение {spam_warns[user_id]}/{MAX_WARNS}"
-        )
-        await track_message(state, msg)
-        return
-
-
-    last_text_time[user_id] = now
-    spam_hits[user_id] = 0
-
-
     # ❌ ЕСЛИ НЕ ТЕКСТ
     if message.content_type != ContentType.TEXT:
         msg = await message.answer("Сейчас нужен текст ✍️")
@@ -1992,6 +1994,9 @@ async def main():
 
     # 🔹 создаём пул БД
     dp["db"] = await asyncpg.create_pool(DATABASE_URL)
+    dp.message.middleware(AntiSpamMiddleware())
+    dp.callback_query.middleware(AntiSpamMiddleware())
+
 
     # 🔹 создаём таблицы
     async with dp["db"].acquire() as conn:

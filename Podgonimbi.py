@@ -3,6 +3,9 @@ import asyncio
 import asyncpg
 import json
 import time
+import logging
+
+logging.basicConfig(level=logging.INFO)
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import (
     Message,
@@ -1301,16 +1304,21 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "cut_text")
 async def cut_text(callback: CallbackQuery, state: FSMContext):
 
+    logging.info("CUT TEXT HANDLER")
+
     data = await state.get_data()
     long_text = data.get("long_text")
 
     if not long_text:
-        await callback.answer()
+        await callback.answer("Нет длинного текста")
         return
 
     short_text = long_text[:MAX_TEXT]
 
-    await state.update_data(text=short_text)
+    await state.update_data(
+        text=short_text,
+        long_text=None
+    )
 
     msg = await callback.message.answer(
         "✂️ Текст укорочен до лимита.",

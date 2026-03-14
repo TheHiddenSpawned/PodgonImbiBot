@@ -1465,9 +1465,9 @@ async def get_text(message: Message, state: FSMContext):
         reply_markup=after_text_kb()
     )
 
-    await track_message(state, msg)
-    
     await state.set_state(Form.text_menu)
+
+    await track_message(state, msg)
 
 # ---------- ПОКАЗ ПРЕВЬЮ ---------
 

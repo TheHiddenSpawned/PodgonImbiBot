@@ -1677,69 +1677,49 @@ async def show_next(message):
 
     media_list = json.loads(submission["media"]) if submission["media"] else []
 
-    if media_list:
+    album = []
+    other_files = []
 
-        first = True
+    for media_type, file_id in media_list:
 
-        for media_type, file_id in media_list:
+        if media_type == "photo":
+            album.append(InputMediaPhoto(media=file_id))
 
-            if first:
+        elif media_type == "video":
+            album.append(InputMediaVideo(media=file_id))
 
-                if media_type == "photo":
-                    await bot.send_photo(ADMIN_ID, file_id, caption=caption)
+        else:
+            other_files.append((media_type, file_id))
 
-                elif media_type == "video":
-                    await bot.send_video(ADMIN_ID, file_id, caption=caption)
 
-                elif media_type == "document":
-                    await bot.send_document(ADMIN_ID, file_id, caption=caption)
+    # альбом
+    if album:
+        album[0].caption = caption
+        await bot.send_media_group(ADMIN_ID, album)
 
-                elif media_type == "audio":
-                    await bot.send_audio(ADMIN_ID, file_id, caption=caption)
+    # файлы отдельно
+    for media_type, file_id in other_files:
 
-                elif media_type == "voice":
-                    await bot.send_voice(ADMIN_ID, file_id, caption=caption)
+        if media_type == "document":
+            await bot.send_document(ADMIN_ID, file_id)
 
-                first = False
+        elif media_type == "audio":
+            await bot.send_audio(ADMIN_ID, file_id)
 
-            else:
+        elif media_type == "voice":
+            await bot.send_voice(ADMIN_ID, file_id)
 
-                if media_type == "photo":
-                    await bot.send_photo(ADMIN_ID, file_id)
 
-                elif media_type == "video":
-                    await bot.send_video(ADMIN_ID, file_id)
-
-                elif media_type == "document":
-                    await bot.send_document(ADMIN_ID, file_id)
-
-                elif media_type == "audio":
-                    await bot.send_audio(ADMIN_ID, file_id)
-
-                elif media_type == "voice":
-                    await bot.send_voice(ADMIN_ID, file_id)
-
-        await bot.send_message(
-            ADMIN_ID,
-            "⬇️ Модерация",
-            reply_markup=moderation_kb(
-                submission["id"],
-                has_text=bool(submission["text"]),
-                has_media=True
-            )
+    # кнопки модерации
+    await bot.send_message(
+        ADMIN_ID,
+        "⬇️ Модерация",
+        reply_markup=moderation_kb(
+            submission["id"],
+            has_text=bool(submission["text"]),
+            has_media=bool(media_list)
         )
-
-    else:
-
-        await bot.send_message(
-            ADMIN_ID,
-            caption,
-            reply_markup=moderation_kb(
-                submission["id"],
-                has_text=bool(submission["text"]),
-                has_media=False
-            )
-        )
+    )
 
     await message.answer(caption, reply_markup=kb)
 

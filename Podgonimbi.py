@@ -1472,23 +1472,25 @@ async def get_text(message: Message, state: FSMContext):
 
         return
 
-    msg = await message.answer(
-        "Текст сохранён ✅\nХочешь добавить медиа или перейти дальше?",
-        reply_markup=after_text_kb()
-    )
+   msg = await message.answer(
+       "Текст сохранён ✅\nХочешь добавить медиа или перейти дальше?",
+       reply_markup=after_text_kb()
+   )
 
-    current = await state.get_state()
-    data = await state.get_data()
-    history = data.get("history", [])
+   data = await state.get_data()
+   history = data.get("history", [])
 
-    if current and (not history or history[-1] != current):
-        history.append(current)
+   current = await state.get_state()
 
-    await state.update_data(history=history)
+   if current != Form.text_menu.state:
+       if not history or history[-1] != current:
+           history.append(current)
 
-    await state.set_state(Form.text_menu)
+   await state.update_data(history=history)
 
-    await track_message(state, msg)
+   await state.set_state(Form.text_menu)
+
+   await track_message(state, msg)
 
 # ---------- ПОКАЗ ПРЕВЬЮ ---------
 

@@ -245,6 +245,13 @@ class AntiSpamMiddleware(BaseMiddleware):
         user_id = user.id
         now = time.time()
 
+        # кнопки не ограничиваем антиспамом
+        if isinstance(event, CallbackQuery):
+            return await handler(event, data)
+
+# 🚫 проверка бана
+if user_id in banned_users:
+
         # 🚫 проверка бана
         if user_id in banned_users:
 

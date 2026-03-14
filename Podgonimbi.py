@@ -1643,7 +1643,7 @@ async def show_next(message):
     submission = await conn.fetchrow("""
         SELECT * FROM submissions
         WHERE status = 'pending'
-        ORDER BY created_at
+        ORDER BY id
         LIMIT 1
     """)
 
@@ -1658,18 +1658,15 @@ async def show_next(message):
     if submission["text"]:
         caption += f"\n\n📝 {submission['text']}"
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="✅ Опубликовать",
-                callback_data=f"approve_{submission['id']}"
-            ),
-            InlineKeyboardButton(
-                text="❌ Отклонить",
-                callback_data=f"reject_{submission['id']}"
-            )
-        ]
-    ])
+    await bot.send_message(
+        ADMIN_ID,
+        caption,
+        reply_markup=moderation_kb(
+            submission["id"],
+            has_text=bool(submission["text"]),
+            has_media=bool(submission["media"])
+        )
+    )
 
     await message.answer(caption, reply_markup=kb)
 

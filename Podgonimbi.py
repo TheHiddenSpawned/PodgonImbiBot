@@ -1624,39 +1624,6 @@ async def get_custom_nick(message: Message, state: FSMContext):
 async def catch_all(message: Message, state: FSMContext):
     await track_message(state, message)
 
-
-# ---------- ЗАПУСК ----------
-
-async def main():
-    await bot.delete_webhook(drop_pending_updates=True)
-
-    # 🔹 создаём пул БД
-    dp["db"] = await asyncpg.create_pool(DATABASE_URL)
-
-    # 🔹 создаём таблицы
-    async with dp["db"].acquire() as conn:
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                telegram_id BIGINT UNIQUE,
-                username TEXT
-            );
-        """)
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS submissions (
-                id SERIAL PRIMARY KEY,
-                telegram_id BIGINT,
-                username TEXT,
-                nickname TEXT,
-                text TEXT,
-                media JSONB,
-                status TEXT DEFAULT 'pending',
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-        """)
-
-    await dp.start_polling(bot)
-
 async def show_next(message):
 
     conn = await dp["db"].acquire()
@@ -1754,6 +1721,38 @@ async def show_next(message):
     )
 
     await message.answer(caption, reply_markup=kb)
+
+# ---------- ЗАПУСК ----------
+
+async def main():
+    await bot.delete_webhook(drop_pending_updates=True)
+
+    # 🔹 создаём пул БД
+    dp["db"] = await asyncpg.create_pool(DATABASE_URL)
+
+    # 🔹 создаём таблицы
+    async with dp["db"].acquire() as conn:
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                telegram_id BIGINT UNIQUE,
+                username TEXT
+            );
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS submissions (
+                id SERIAL PRIMARY KEY,
+                telegram_id BIGINT,
+                username TEXT,
+                nickname TEXT,
+                text TEXT,
+                media JSONB,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
+
+    await dp.start_polling(bot)
 
 def run_http():
     port = int(os.environ.get("PORT", 10000))

@@ -1486,11 +1486,11 @@ async def get_text(message: Message, state: FSMContext):
         if not history or history[-1] != current:
            history.append(current)
 
-   await state.update_data(history=history)
+    await state.update_data(history=history)
 
-   await state.set_state(Form.text_menu)
+    await state.set_state(Form.text_menu)
 
-   await track_message(state, msg)
+    await track_message(state, msg)
 
 # ---------- ПОКАЗ ПРЕВЬЮ ---------
 

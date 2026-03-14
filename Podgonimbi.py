@@ -1759,9 +1759,6 @@ def run_http():
     server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
     server.serve_forever()
 
-async def main():
-    await dp.start_polling(bot)
-
 if __name__ == "__main__":
     Thread(target=run_http, daemon=True).start()
     asyncio.run(main())

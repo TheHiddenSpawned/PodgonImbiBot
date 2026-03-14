@@ -1286,6 +1286,8 @@ async def get_text(message: Message, state: FSMContext):
 
     # если реально спамит
     if delta < 2:
+        last_text_time[user_id] = now
+        return
 
     # 🚫 ПРОВЕРКА БАНА
     if user_id in banned_users and now < banned_users[user_id]:

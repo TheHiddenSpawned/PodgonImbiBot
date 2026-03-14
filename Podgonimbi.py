@@ -45,6 +45,7 @@ BAN_TIME = 3600  # 1 час
 last_text_time = {}
 spam_warns = {}
 banned_users = {}
+spam_hits = {}
 
 
 class Form(StatesGroup):
@@ -1273,39 +1274,45 @@ async def get_text(message: Message, state: FSMContext):
 
     await track_message(state, message)
 
-    import time
-
     user_id = message.from_user.id
     now = time.time()
 
-    # проверка бана
+    # 🚫 ПРОВЕРКА БАНА
     if user_id in banned_users and now < banned_users[user_id]:
 
-        remaining = int((banned_users[user_id] - now) / 60)
+        if message.text and message.text.startswith("/unban"):
+            pass
+        else:
 
-        msg = await message.answer(
-            f"🚫 Ты временно заблокирован за спам.\n\n"
-            f"Попробуй снова через {remaining} мин."
-        )
-        await track_message(state, msg)
-        return
+            if user_id in last_text_time and now - last_text_time[user_id] < 5:
+                return
 
+            remaining = int((banned_users[user_id] - now) / 60)
 
-    # если сообщение слишком быстрое
-    if user_id in last_text_time and now - last_text_time[user_id] < TEXT_COOLDOWN:
-
-        # первое быстрое сообщение просто игнорируем
-        if user_id not in spam_warns:
-            spam_warns[user_id] = 0
+            msg = await message.answer(
+                f"🚫 Ты временно заблокирован за спам.\n\n"
+                f"Попробуй снова через {remaining} мин."
+            )
+            await track_message(state, msg)
             return
 
-        spam_warns[user_id] += 1
 
-        # бан после 3 варнов
+    # ⚡ АНТИСПАМ
+    if user_id in last_text_time and now - last_text_time[user_id] < TEXT_COOLDOWN:
+
+        spam_hits[user_id] = spam_hits.get(user_id, 0) + 1
+
+        # первые 2 быстрых сообщения игнорируем (телега режет длинный текст)
+        if spam_hits[user_id] <= 2:
+            return
+
+        spam_warns[user_id] = spam_warns.get(user_id, 0) + 1
+
         if spam_warns[user_id] >= MAX_WARNS:
 
             banned_users[user_id] = now + BAN_TIME
             spam_warns[user_id] = 0
+            spam_hits[user_id] = 0
 
             msg = await message.answer(
                 "🚫 Ты отправляешь сообщения слишком быстро.\n\n"
@@ -1323,11 +1330,20 @@ async def get_text(message: Message, state: FSMContext):
 
 
     last_text_time[user_id] = now
-    spam_warns[user_id] = 0
+    spam_hits[user_id] = 0
+
+
+    # ❌ ЕСЛИ НЕ ТЕКСТ
+    if message.content_type != ContentType.TEXT:
+        msg = await message.answer("Сейчас нужен текст ✍️")
+        await track_message(state, msg)
+        return
+
 
     text = message.text
 
-    # 🔴 ПРОВЕРКА ЛИМИТА
+
+    # 🔴 ПРОВЕРКА ЛИМИТА ТЕКСТА
     if len(text) > MAX_TEXT:
 
         extra = len(text) - MAX_TEXT
@@ -1347,56 +1363,80 @@ async def get_text(message: Message, state: FSMContext):
 
         return
 
-    await state.update_data(text=message.text)
+
+    await state.update_data(text=text)
 
     user_data = await state.get_data()
+
 
     if user_data.get("final_nick"):
 
         nickname = user_data.get("final_nick")
-        caption = f"🔥 Вот как будет выглядеть пост:\n\n👤 {nickname}"
+
+        caption = (
+            "🔥 Новый подгон\n\n"
+            f"👤 Подгон от: {nickname}\n"
+            "@ImbaPodgonBot\n\n"
+        )
 
         if user_data.get("text"):
-            caption += f"\n\n📝 {user_data['text']}"
+            caption += f"{user_data['text']}"
+
 
         media_list = user_data.get("media", [])
 
+
         if media_list:
+
             first = True
+
             for media_type, file_id in media_list:
 
                 if first:
+
                     if media_type == "photo":
                         msg = await bot.send_photo(message.from_user.id, file_id, caption=caption)
+
                     elif media_type == "video":
                         msg = await bot.send_video(message.from_user.id, file_id, caption=caption)
+
                     elif media_type == "document":
                         msg = await bot.send_document(message.from_user.id, file_id, caption=caption)
+
                     elif media_type == "audio":
                         msg = await bot.send_audio(message.from_user.id, file_id, caption=caption)
+
                     elif media_type == "voice":
                         msg = await bot.send_voice(message.from_user.id, file_id, caption=caption)
 
                     await track_message(state, msg)
+
                     first = False
 
                 else:
+
                     if media_type == "photo":
                         msg = await bot.send_photo(message.from_user.id, file_id)
+
                     elif media_type == "video":
                         msg = await bot.send_video(message.from_user.id, file_id)
+
                     elif media_type == "document":
                         msg = await bot.send_document(message.from_user.id, file_id)
+
                     elif media_type == "audio":
                         msg = await bot.send_audio(message.from_user.id, file_id)
+
                     elif media_type == "voice":
                         msg = await bot.send_voice(message.from_user.id, file_id)
 
                     await track_message(state, msg)
 
         else:
+
             msg = await message.answer(caption)
             await track_message(state, msg)
+
 
         msg = await message.answer(
             "Публикуем?",
@@ -1405,7 +1445,9 @@ async def get_text(message: Message, state: FSMContext):
         await track_message(state, msg)
 
         await state.set_state(Form.preview)
+
         return
+
 
     await state.set_state(Form.text_menu)
 
@@ -1413,6 +1455,7 @@ async def get_text(message: Message, state: FSMContext):
         "Текст сохранён ✅\nХочешь добавить медиа или перейти дальше?",
         reply_markup=after_text_kb()
     )
+
     await track_message(state, msg)
 
 # ---------- ПОКАЗ ПРЕВЬЮ ---------

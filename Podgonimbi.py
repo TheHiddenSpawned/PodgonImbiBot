@@ -1465,6 +1465,15 @@ async def get_text(message: Message, state: FSMContext):
         reply_markup=after_text_kb()
     )
 
+    current = await state.get_state()
+    data = await state.get_data()
+    history = data.get("history", [])
+
+    if current:
+        history.append(current)
+
+    await state.update_data(history=history)
+
     await state.set_state(Form.text_menu)
 
     await track_message(state, msg)

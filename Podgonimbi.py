@@ -1216,6 +1216,48 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             reply_markup=after_submit_kb()
         )
 
+@dp.callback_query(F.data == "cut_text")
+async def cut_text(callback: CallbackQuery, state: FSMContext):
+
+    data = await state.get_data()
+    long_text = data.get("long_text")
+
+    if not long_text:
+        await callback.answer()
+        return
+
+    short_text = long_text[:MAX_TEXT]
+
+    await state.update_data(text=short_text)
+
+    msg = await callback.message.answer(
+        "✂️ Текст укорочен до лимита.",
+        reply_markup=after_text_kb()
+    )
+
+    await track_message(state, msg)
+
+    await state.set_state(Form.text_menu)
+
+    await callback.answer()
+
+@dp.callback_query(F.data == "edit_text")
+async def edit_text_again(callback: CallbackQuery, state: FSMContext):
+
+    msg = await callback.message.answer(
+        "Отправь новый текст ✍️",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔄 Назад", callback_data="back")],
+            [InlineKeyboardButton(text="🏠 В начало", callback_data="home")]
+        ])
+    )
+
+    await track_message(state, msg)
+
+    await state.set_state(Form.waiting_text)
+
+    await callback.answer()
+
 # ---------- ТЕКСТ ----------
 
 @dp.message(Form.waiting_text)
@@ -1226,6 +1268,28 @@ async def get_text(message: Message, state: FSMContext):
     if message.content_type != ContentType.TEXT:
         msg = await message.answer("Сейчас нужен текст ✍️")
         await track_message(state, msg)
+        return
+
+    text = message.text
+
+    # 🔴 ПРОВЕРКА ЛИМИТА
+    if len(text) > MAX_TEXT:
+
+        extra = len(text) - MAX_TEXT
+
+        msg = await message.answer(
+            "⚠️ Текст слишком длинный\n\n"
+            f"Лимит: {MAX_TEXT} символов\n"
+            f"У тебя: {len(text)}\n"
+            f"Лишних символов: {extra}\n\n"
+            "Можно укоротить текст до лимита или изменить его.",
+            reply_markup=text_limit_kb()
+        )
+
+        await track_message(state, msg)
+
+        await state.update_data(long_text=text)
+
         return
 
     await state.update_data(text=message.text)

@@ -1649,7 +1649,14 @@ async def show_next(message):
 
     if not submission:
         await dp["db"].release(conn)
-        await message.answer("🎉 Очередь закончилась")
+
+        await bot.send_message(
+            ADMIN_ID,
+            "🎉 Очередь закончилась\n\n"
+            "Хочешь прислать новый подгон?",
+            reply_markup=after_submit_kb()
+        )
+
         return
 
     checked = await conn.fetchval("""

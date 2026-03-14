@@ -243,10 +243,13 @@ async def approve_handler(callback: CallbackQuery):
         await dp["db"].release(conn)
         return
 
-    caption = f"🔥 Новый подгон\n\n👤 {submission['nickname']}"
+    caption = "🔥 Новый подгон!\n\n"
 
     if submission["text"]:
-        caption += f"\n\n📝 {submission['text']}"
+        caption += f"{submission['text']}\n\n"
+
+    caption += f"👤 Подгон от: {submission['nickname']}\n\n"
+    caption += "📩 Прислать подгон → @ImbaPodgonBot"
 
     media_list = json.loads(submission["media"]) if submission["media"] else []
 
@@ -441,10 +444,13 @@ async def admin_edit_text_save(message: Message, state: FSMContext):
     await dp["db"].release(conn)
 
     # 🔹 Собираем новый caption
-    caption = f"🔥 Новый подгон\n\n👤 {submission['nickname']}"
+    caption = "🔥 Новый подгон!\n\n"
 
     if submission["text"]:
-        caption += f"\n\n📝 {submission['text']}"
+        caption += f"{submission['text']}\n\n"
+
+    caption += f"👤 Подгон от: {submission['nickname']}\n\n"
+    caption += "📩 Прислать подгон → @ImbaPodgonBot"
 
     media_raw = submission["media"]
 
@@ -552,10 +558,13 @@ async def admin_delete_media_process(message: Message, state: FSMContext):
     await dp["db"].release(conn)
 
     # --- новый caption ---
-    caption = f"🔥 Новый подгон\n\n👤 {submission['nickname']}"
+    caption = "🔥 Вот как будет выглядеть пост:\n\n"
 
-    if submission["text"]:
-        caption += f"\n\n📝 {submission['text']}"
+    if user_data.get("text"):
+        caption += f"{user_data['text']}\n\n"
+
+    caption += f"👤 Подгон от: {nickname}\n\n"
+    caption += "📩 Прислать подгон → @ImbaPodgonBot"
 
     try:
         if media_list:
@@ -1473,10 +1482,13 @@ async def admin_edit_nickname_save(message: Message, state: FSMContext):
     await dp["db"].release(conn)
 
     # 🔹 Формируем caption
-    caption = f"🔥 Новый подгон\n\n👤 {submission['nickname']}"
+    caption = "🔥 Новый подгон!\n\n"
 
     if submission["text"]:
-        caption += f"\n\n📝 {submission['text']}"
+        caption += f"{submission['text']}\n\n"
+
+    caption += f"👤 Подгон от: {submission['nickname']}\n\n"
+    caption += "📩 Прислать подгон → @ImbaPodgonBot"
 
     media_raw = submission["media"]
 
@@ -1662,12 +1674,13 @@ async def show_next(message):
         f"📊 Модерация\n\n"
         f"✅ Проверено: {checked}\n"
         f"📥 Осталось: {pending}\n\n"
-        f"🔥 Новый подгон\n\n"
-        f"👤 {submission['nickname']}"
+        f"🔥 Новый подгон!\n\n"
     )
 
     if submission["text"]:
-        caption += f"\n\n📝 {submission['text']}"
+        caption += f"{submission['text']}\n\n"
+
+caption += f"👤 Подгон от: {submission['nickname']}"
 
     media_list = json.loads(submission["media"]) if submission["media"] else []
 
@@ -1719,8 +1732,6 @@ async def show_next(message):
             has_media=bool(media_list)
         )
     )
-
-    await message.answer(caption, reply_markup=kb)
 
 # ---------- ЗАПУСК ----------
 

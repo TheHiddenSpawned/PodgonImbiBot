@@ -1183,13 +1183,26 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
         await state.clear()
 
-        await callback.message.answer(
-            f"🔥 Подгон отправлен на модерацию!\n\n"
-            f"📊 Сегодня: {count_today}/5\n\n"
-            "Хочешь прислать ещё один?",
-            reply_markup=after_submit_kb()
-        )
-        return
+        if callback.from_user.id == ADMIN_ID:
+
+            text = (
+                "🔥 Подгон отправлен на модерацию!\n\n"
+                f"📊 Сегодня отправлено подгонов: {count_today}\n\n"
+                "Хочешь прислать ещё один?"
+            )
+
+        else:
+
+            text = (
+                "🔥 Подгон отправлен на модерацию!\n\n"
+                f"📊 Сегодня отправлено подгонов: {count_today}/5\n\n"
+                "Хочешь прислать ещё один?"
+            )
+
+await callback.message.answer(
+    text,
+    reply_markup=after_submit_kb()
+)
 
 # ---------- ТЕКСТ ----------
 

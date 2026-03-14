@@ -1460,9 +1460,6 @@ async def get_text(message: Message, state: FSMContext):
 
         return
 
-
-    await state.set_state(Form.text_menu)
-
     msg = await message.answer(
         "Текст сохранён ✅\nХочешь добавить медиа или перейти дальше?",
         reply_markup=after_text_kb()

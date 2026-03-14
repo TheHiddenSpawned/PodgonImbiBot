@@ -1656,7 +1656,6 @@ async def show_next(message):
             "Хочешь прислать новый подгон?",
             reply_markup=after_submit_kb()
         )
-
         return
 
     checked = await conn.fetchval("""
@@ -1699,12 +1698,17 @@ async def show_next(message):
             other_files.append((media_type, file_id))
 
 
-    # альбом
+    # если есть альбом
     if album:
         album[0].caption = caption
         await bot.send_media_group(ADMIN_ID, album)
 
-    # файлы отдельно
+    # если нет медиа вообще — отправляем текст
+    elif not other_files:
+        await bot.send_message(ADMIN_ID, caption)
+
+
+    # отправка файлов отдельно
     for media_type, file_id in other_files:
 
         if media_type == "document":
@@ -1717,16 +1721,16 @@ async def show_next(message):
             await bot.send_voice(ADMIN_ID, file_id)
 
 
-        # кнопки модерации
-        await bot.send_message(
-            ADMIN_ID,
-            "⬇️ Модерация",
-            reply_markup=moderation_kb(
-                submission["id"],
-                has_text=bool(submission["text"]),
-                has_media=bool(media_list)
-            )
+    # кнопки модерации
+    await bot.send_message(
+        ADMIN_ID,
+        "⬇️ Модерация",
+        reply_markup=moderation_kb(
+            submission["id"],
+            has_text=bool(submission["text"]),
+            has_media=bool(media_list)
         )
+    )
 
     await message.answer(caption, reply_markup=kb)
 

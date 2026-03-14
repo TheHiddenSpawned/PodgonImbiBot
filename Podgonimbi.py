@@ -1029,8 +1029,16 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
         conn = await dp["db"].acquire()
 
         submission_id = await conn.fetchval("""
-            INSERT INTO submissions (telegram_id, username, nickname, text, media)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO submissions (
+                telegram_id,
+                username,
+                nickname,
+                text,
+                media,
+                status,
+                created_at
+            )
+            VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
             RETURNING id
         """,
             callback.from_user.id,

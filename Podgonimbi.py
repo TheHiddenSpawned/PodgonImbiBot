@@ -1028,6 +1028,24 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
 
         conn = await dp["db"].acquire()
 
+        # --- АНТИСПАМ ПРОВЕРКА ---
+        count_today = await conn.fetchval("""
+            SELECT COUNT(*) FROM submissions
+            WHERE telegram_id = $1
+            AND created_at >= CURRENT_DATE
+        """, callback.from_user.id)
+
+        if count_today >= 5:
+
+            await dp["db"].release(conn)
+
+            await callback.message.answer(
+                "🚫 Ты уже отправил 5 подгонов сегодня.\n\n"
+                "Попробуй снова завтра 🙂"
+            )
+            return
+
+        # --- СОХРАНЕНИЕ ПОДГОНА ---
         submission_id = await conn.fetchval("""
             INSERT INTO submissions (
                 telegram_id,
@@ -1047,6 +1065,8 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             user_data.get("text"),
             json.dumps(media_list)
         )
+
+        count_today += 1
 
         await dp["db"].release(conn)
 
@@ -1145,7 +1165,8 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
         await state.clear()
 
         await callback.message.answer(
-            "🔥 Подгон отправлен на модерацию!\n\n"
+            f"🔥 Подгон отправлен на модерацию!\n\n"
+            f"📊 Сегодня: {count_today}/5\n\n"
             "Хочешь прислать ещё один?",
             reply_markup=after_submit_kb()
         )

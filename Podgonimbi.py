@@ -14,7 +14,7 @@ from aiogram.types import (
     InputMediaAudio
 )
 from aiogram.enums import ContentType
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram import F

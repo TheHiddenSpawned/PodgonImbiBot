@@ -733,11 +733,12 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
         user_data = await state.get_data()
         history = user_data.get("history", [])
 
-        if current:
-            history.append(current)
+        if current and current != new_state:
+            if not history or history[-1] != current:
+                history.append(current)
 
         await state.update_data(history=history)
-        await state.set_state(new_state)
+        await state.set_state(new_state))
 
     # ---------------- HOME ----------------
     if data == "home":

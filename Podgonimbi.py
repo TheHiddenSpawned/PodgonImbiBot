@@ -1044,15 +1044,25 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             AND created_at >= CURRENT_DATE
         """, callback.from_user.id)
 
-        if count_today >= 5:
+        # лимит только для обычных пользователей
+        if count_today >= 5 and callback.from_user.id != ADMIN_ID:
 
             await dp["db"].release(conn)
 
             await callback.message.answer(
                 "🚫 Ты уже отправил 5 подгонов сегодня.\n\n"
                 "Попробуй снова завтра 🙂"
-            )
+           )
             return
+
+        # если админ — просто покажем информацию
+        if callback.from_user.id == ADMIN_ID:
+
+            await callback.message.answer(
+                f"🛠 Админ-режим\n"
+                f"📊 Сегодня отправлено: {count_today}\n"
+                f"🚫 Лимит 5 подгонов игнорируется"
+           )
 
         # --- СОХРАНЕНИЕ ПОДГОНА ---
         submission_id = await conn.fetchval("""

@@ -1469,7 +1469,7 @@ async def get_text(message: Message, state: FSMContext):
     data = await state.get_data()
     history = data.get("history", [])
 
-    if current:
+    if current and (not history or history[-1] != current):
         history.append(current)
 
     await state.update_data(history=history)

@@ -1199,10 +1199,10 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
                 "Хочешь прислать ещё один?"
             )
 
-await callback.message.answer(
-    text,
-    reply_markup=after_submit_kb()
-)
+        await callback.message.answer(
+            text,
+            reply_markup=after_submit_kb()
+        )
 
 # ---------- ТЕКСТ ----------
 

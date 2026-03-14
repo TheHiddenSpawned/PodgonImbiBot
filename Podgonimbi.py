@@ -36,6 +36,8 @@ CHANNEL_ID = int(CHANNEL_ID)
 bot = Bot(TOKEN)
 dp = Dispatcher()
 
+MAX_TEXT = 700
+
 
 class Form(StatesGroup):
     choosing_type = State()
@@ -66,6 +68,16 @@ def after_text_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📎 Добавить медиа", callback_data="add_media")],
         [InlineKeyboardButton(text="🚀 Опубликовать", callback_data="to_nick")],
+        [
+            InlineKeyboardButton(text="🔄 Назад", callback_data="back"),
+            InlineKeyboardButton(text="🏠 В начало", callback_data="home")
+        ]
+    ])
+
+def text_limit_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"✂️ Укоротить до {MAX_TEXT} символов", callback_data="cut_text")],
+        [InlineKeyboardButton(text="✏️ Изменить текст", callback_data="edit_text")],
         [
             InlineKeyboardButton(text="🔄 Назад", callback_data="back"),
             InlineKeyboardButton(text="🏠 В начало", callback_data="home")

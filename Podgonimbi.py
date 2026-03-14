@@ -1277,6 +1277,15 @@ async def get_text(message: Message, state: FSMContext):
 
     user_id = message.from_user.id
     now = time.time()
+    delta = now - last_text_time.get(user_id, 0)
+
+    # если это куски одного длинного сообщения — игнорируем
+    if delta < 0.5:
+        last_text_time[user_id] = now
+        return
+
+    # если реально спамит
+    if delta < 2:
 
     # 🚫 ПРОВЕРКА БАНА
     if user_id in banned_users and now < banned_users[user_id]:

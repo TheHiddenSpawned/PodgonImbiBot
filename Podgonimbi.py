@@ -38,6 +38,14 @@ dp = Dispatcher()
 
 MAX_TEXT = 700
 
+TEXT_COOLDOWN = 2  # 2 секунды между сообщениями
+MAX_WARNS = 3
+BAN_TIME = 3600  # 1 час
+
+last_text_time = {}
+spam_warns = {}
+banned_users = {}
+
 
 class Form(StatesGroup):
     choosing_type = State()
@@ -1264,6 +1272,52 @@ async def edit_text_again(callback: CallbackQuery, state: FSMContext):
 async def get_text(message: Message, state: FSMContext):
 
     await track_message(state, message)
+
+    import time
+
+    user_id = message.from_user.id
+    now = time.time()
+
+    # 🔴 проверка бана
+    if user_id in banned_users and now < banned_users[user_id]:
+
+        remaining = int((banned_users[user_id] - now) / 60)
+
+        msg = await message.answer(
+            f"🚫 Ты временно заблокирован за спам.\n\n"
+            f"Попробуй снова через {remaining} мин."
+        )
+        await track_message(state, msg)
+        return
+
+    # 🔴 антифлуд
+    if user_id in last_text_time and now - last_text_time[user_id] < TEXT_COOLDOWN:
+
+        spam_warns[user_id] = spam_warns.get(user_id, 0) + 1
+
+        # бан
+        if spam_warns[user_id] >= MAX_WARNS:
+
+            banned_users[user_id] = now + BAN_TIME
+            spam_warns[user_id] = 0
+
+            msg = await message.answer(
+                "🚫 Ты отправляешь сообщения слишком быстро.\n\n"
+                "Бот временно заблокировал тебя на 1 час."
+            )
+            await track_message(state, msg)
+            return
+
+        warns_left = MAX_WARNS - spam_warns[user_id]
+
+        msg = await message.answer(
+            f"⚠️ Не отправляй сообщения слишком быстро.\n\n"
+            f"Предупреждение {spam_warns[user_id]}/{MAX_WARNS}"
+        )
+        await track_message(state, msg)
+        return
+
+    last_text_time[user_id] = now
 
     if message.content_type != ContentType.TEXT:
         msg = await message.answer("Сейчас нужен текст ✍️")

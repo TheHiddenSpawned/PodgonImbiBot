@@ -249,24 +249,24 @@ class AntiSpamMiddleware(BaseMiddleware):
         if isinstance(event, CallbackQuery):
             return await handler(event, data)
 
-# 🚫 проверка бана
-if user_id in banned_users:
+    # 🚫 проверка бана
+    if user_id in banned_users:
 
-    if now < banned_users[user_id]:
+        if now < banned_users[user_id]:
 
-        if isinstance(event, Message):
+            if isinstance(event, Message):
 
-            remaining = int((banned_users[user_id] - now) / 60)
+                remaining = int((banned_users[user_id] - now) / 60)
 
-            try:
-                await event.answer(
-                    f"🚫 Ты временно заблокирован за спам.\n\n"
-                    f"Попробуй снова через {remaining} мин."
-                )
-            except:
-                pass
+                try:
+                    await event.answer(
+                        f"🚫 Ты временно заблокирован за спам.\n\n"
+                        f"Попробуй снова через {remaining} мин."
+                    )
+                except:
+                    pass
 
-        return
+            return
 
     else:
         del banned_users[user_id]

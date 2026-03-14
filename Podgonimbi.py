@@ -1647,13 +1647,30 @@ async def show_next(message):
         LIMIT 1
     """)
 
-    await dp["db"].release(conn)
-
     if not submission:
+        await dp["db"].release(conn)
         await message.answer("🎉 Очередь закончилась")
         return
 
-    caption = f"🔥 Новый подгон\n\n👤 {submission['nickname']}"
+    checked = await conn.fetchval("""
+        SELECT COUNT(*) FROM submissions
+        WHERE status IN ('approved', 'rejected')
+    """)
+
+    pending = await conn.fetchval("""
+        SELECT COUNT(*) FROM submissions
+        WHERE status = 'pending'
+    """)
+
+    await dp["db"].release(conn)
+
+    caption = (
+        f"📊 Модерация\n\n"
+        f"✅ Проверено: {checked}\n"
+        f"📥 Осталось: {pending}\n\n"
+        f"🔥 Новый подгон\n\n"
+        f"👤 {submission['nickname']}"
+    )
 
     if submission["text"]:
         caption += f"\n\n📝 {submission['text']}"

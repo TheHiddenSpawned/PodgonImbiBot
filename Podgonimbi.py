@@ -2,6 +2,7 @@ import os
 import asyncio
 import asyncpg
 import json
+import time
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import (
     Message,

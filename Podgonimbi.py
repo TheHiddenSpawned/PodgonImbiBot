@@ -1278,7 +1278,7 @@ async def get_text(message: Message, state: FSMContext):
     user_id = message.from_user.id
     now = time.time()
 
-    # 🔴 проверка бана
+    # проверка бана
     if user_id in banned_users and now < banned_users[user_id]:
 
         remaining = int((banned_users[user_id] - now) / 60)
@@ -1290,12 +1290,18 @@ async def get_text(message: Message, state: FSMContext):
         await track_message(state, msg)
         return
 
-    # 🔴 антифлуд
+
+    # если сообщение слишком быстрое
     if user_id in last_text_time and now - last_text_time[user_id] < TEXT_COOLDOWN:
 
-        spam_warns[user_id] = spam_warns.get(user_id, 0) + 1
+        # первое быстрое сообщение просто игнорируем
+        if user_id not in spam_warns:
+            spam_warns[user_id] = 0
+            return
 
-        # бан
+        spam_warns[user_id] += 1
+
+        # бан после 3 варнов
         if spam_warns[user_id] >= MAX_WARNS:
 
             banned_users[user_id] = now + BAN_TIME
@@ -1308,8 +1314,6 @@ async def get_text(message: Message, state: FSMContext):
             await track_message(state, msg)
             return
 
-        warns_left = MAX_WARNS - spam_warns[user_id]
-
         msg = await message.answer(
             f"⚠️ Не отправляй сообщения слишком быстро.\n\n"
             f"Предупреждение {spam_warns[user_id]}/{MAX_WARNS}"
@@ -1317,12 +1321,9 @@ async def get_text(message: Message, state: FSMContext):
         await track_message(state, msg)
         return
 
-    last_text_time[user_id] = now
 
-    if message.content_type != ContentType.TEXT:
-        msg = await message.answer("Сейчас нужен текст ✍️")
-        await track_message(state, msg)
-        return
+    last_text_time[user_id] = now
+    spam_warns[user_id] = 0
 
     text = message.text
 
@@ -1554,6 +1555,41 @@ async def get_media(message: Message, state: FSMContext):
             reply_markup=after_media_kb()
         )
         await track_message(state, msg)
+
+@dp.message(Command("unban"))
+async def unban_user(message: Message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    parts = message.text.split()
+
+    if len(parts) < 2:
+        await message.answer("Использование:\n/unban USER_ID")
+        return
+
+    user_id = int(parts[1])
+
+    if user_id in banned_users:
+        del banned_users[user_id]
+
+    if user_id in spam_warns:
+        del spam_warns[user_id]
+
+    await message.answer(f"✅ Пользователь {user_id} разбанен")
+
+@dp.message(Command("unbanme"))
+async def unban_me(message: Message):
+
+    user_id = message.from_user.id
+
+    if user_id in banned_users:
+        del banned_users[user_id]
+
+    if user_id in spam_warns:
+        del spam_warns[user_id]
+
+    await message.answer("✅ Бан снят")
     
 @dp.message(Form.delete_media)
 async def process_delete_media(message: Message, state: FSMContext):

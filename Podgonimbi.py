@@ -1301,10 +1301,10 @@ async def callbacks(callback: CallbackQuery, state: FSMContext):
             reply_markup=after_submit_kb()
         )
 
-@dp.callback_query(F.data == "cut_text")
+@dp.callback_query(Form.waiting_text, F.data == "cut_text")
 async def cut_text(callback: CallbackQuery, state: FSMContext):
 
-    logging.info("CUT TEXT HANDLER")
+    print("CUT TEXT HANDLER")
 
     data = await state.get_data()
     long_text = data.get("long_text")
@@ -1319,6 +1319,8 @@ async def cut_text(callback: CallbackQuery, state: FSMContext):
         text=short_text,
         long_text=None
     )
+    
+    await callback.message.delete()
 
     msg = await callback.message.answer(
         "✂️ Текст укорочен до лимита.",

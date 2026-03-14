@@ -1717,16 +1717,16 @@ async def show_next(message):
             await bot.send_voice(ADMIN_ID, file_id)
 
 
-    # кнопки модерации
-    await bot.send_message(
-        ADMIN_ID,
-        "⬇️ Модерация",
-        reply_markup=moderation_kb(
-            submission["id"],
-            has_text=bool(submission["text"]),
-            has_media=bool(media_list)
+        # кнопки модерации
+        await bot.send_message(
+            ADMIN_ID,
+            "⬇️ Модерация",
+            reply_markup=moderation_kb(
+                submission["id"],
+                has_text=bool(submission["text"]),
+                has_media=bool(media_list)
+            )
         )
-    )
 
     await message.answer(caption, reply_markup=kb)
 
